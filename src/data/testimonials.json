@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "text": "Pedí un ramo para el cumpleaños de mi mamá en Orizatlán y llegaron a tiempo. Las rosas estaban hermosas y duraron más de una semana. ¡Muy recomendado!",
+    "author": "María Andrade",
+    "initials": "MA",
+    "role": "Cliente de Huitzitzilingo",
+    "date": "12 Oct 2023",
+    "rating": 5
+  },
+  {
+    "id": 2,
+    "text": "Excelente servicio para nuestra boda. Decoraron la iglesia y el salón justo como lo imaginamos. Florería Bautista es confianza total en la región.",
+    "author": "Ricardo Hernández",
+    "initials": "RH",
+    "role": "Evento en Orizatlán",
+    "date": "05 Nov 2023",
+    "rating": 5
+  },
+  {
+    "id": 3,
+    "text": "La atención por WhatsApp es súper rápida. Me ayudaron a elegir el arreglo ideal para mi aniversario. ¡Son los mejores floristas de la zona!",
+    "author": "Leticia Cruz",
+    "initials": "LC",
+    "role": "Cliente frecuente",
+    "date": "28 Oct 2023",
+    "rating": 5
+  },
+  {
+    "id": 4,
+    "text": "La atención al cliente es excepcional. Me ayudaron a elegir el ramo perfecto para el aniversario de mis padres y la entrega fue puntual. ¡Altamente recomendados!",
+    "author": "María G.",
+    "initials": "MG",
+    "role": "Cliente",
+    "date": "12 Oct 2023",
+    "rating": 5
+  },
+  {
+    "id": 5,
+    "text": "Flores fresquísimas y un diseño floral que superó mis expectativas. El servicio de entrega en Orizatlán fue impecable. Gracias por los detalles.",
+    "author": "Roberto L.",
+    "initials": "RL",
+    "role": "Cliente",
+    "date": "05 Nov 2023",
+    "rating": 5
+  },
+  {
+    "id": 6,
+    "text": "Es mi florería de confianza. Siempre tienen opciones hermosas y el trato es muy cálido y profesional. Hacen que enviar flores sea una experiencia mágica.",
+    "author": "Elena R.",
+    "initials": "ER",
+    "role": "Cliente frecuente",
+    "date": "28 Oct 2023",
+    "rating": 5
+  }
+]

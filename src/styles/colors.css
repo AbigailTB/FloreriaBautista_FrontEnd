@@ -1,0 +1,19 @@
+@theme {
+  /* Brand Colors */
+  --color-brand-deep: #1a3b5b;
+  --color-brand-light: #f0f7ff;
+  --color-brand-coral: #ff7f7d;
+  --color-brand-accent: #e2f0fd;
+
+  /* Custom Blue Palette based on #1a3b5b */
+  --color-blue-50: #f0f4f8;
+  --color-blue-100: #d9e4ef;
+  --color-blue-200: #b6cce1;
+  --color-blue-300: #8baed0;
+  --color-blue-400: #5f8ebc;
+  --color-blue-500: #3f72a3;
+  --color-blue-600: #1a3b5b; /* Requested blue */
+  --color-blue-700: #15304a;
+  --color-blue-800: #102438;
+  --color-blue-900: #0a1825;
+}
