@@ -1,20 +1,90 @@
 [
   {
-    "email": "admin@gmail.com",
-    "password": "1234",
-    "role": "administrador",
-    "name": "Administrador"
+    "id": "USER-001",
+    "name": "Josmar Bautista",
+    "email": "josmar050110@gmail.com",
+    "password": "admin",
+    "phone": "+52 555 123 4567",
+    "role": "admin",
+    "status": "active",
+    "createdAt": "2024-12-01T08:00:00Z",
+    "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL..."
   },
   {
-    "email": "Empleado@gmail.com",
-    "password": "1234",
-    "role": "empleado",
-    "name": "Empleado"
+    "id": "USER-002",
+    "name": "Maria Garcia",
+    "email": "maria.g@email.com",
+    "password": "user123",
+    "phone": "+52 555 987 6543",
+    "role": "customer",
+    "status": "active",
+    "createdAt": "2026-03-08T14:20:00Z",
+    "avatar": "https://picsum.photos/seed/user2/100/100"
   },
   {
-    "email": "usuario@gmail.com",
-    "password": "1234",
-    "role": "cliente",
-    "name": "Usuario Cliente"
+    "id": "USER-003",
+    "name": "Juan Perez",
+    "email": "j.perez@email.com",
+    "password": "user123",
+    "phone": "+52 555 444 3322",
+    "role": "customer",
+    "status": "active",
+    "createdAt": "2026-03-09T11:15:00Z",
+    "avatar": "https://picsum.photos/seed/user3/100/100"
+  },
+  {
+    "id": "USER-004",
+    "name": "Luisa Mendez",
+    "email": "luisa.m@email.com",
+    "password": "user123",
+    "phone": "+52 555 000 1111",
+    "role": "customer",
+    "status": "active",
+    "createdAt": "2026-03-10T09:45:00Z",
+    "avatar": "https://picsum.photos/seed/user4/100/100"
+  },
+  {
+    "id": "USER-005",
+    "name": "Carlos Ruiz",
+    "email": "c.ruiz@email.com",
+    "password": "user123",
+    "phone": "+52 555 222 3333",
+    "role": "customer",
+    "status": "active",
+    "createdAt": "2026-03-11T08:30:00Z",
+    "avatar": "https://picsum.photos/seed/user5/100/100"
+  },
+  {
+    "id": "USER-006",
+    "name": "Ana Lopez",
+    "email": "a.lopez@email.com",
+    "password": "user123",
+    "phone": "+52 555 444 5555",
+    "role": "customer",
+    "status": "active",
+    "createdAt": "2026-03-11T11:00:00Z",
+    "avatar": "https://picsum.photos/seed/user6/100/100"
+  },
+  {
+    "id": "USER-007",
+    "name": "Ana Martínez",
+    "email": "ana.m@floreriabautista.com",
+    "password": "admin",
+    "phone": "+52 555 987 6543",
+    "role": "staff",
+    "status": "active",
+    "createdAt": "2024-02-15T10:00:00Z",
+    "avatar": "https://lh3.googleusercontent.com/aida-public/AB6AXuCchIoxq4-_441MuNQx5dLnGrnETznTaw3YJk5XPgfhAZL1_Y8ppNliu5tT-kjy3rwLGHQVSKI5fBdrq_XqdWSRvHm_H7oZRhdz8PSNx0v95-oGWtCBwCH01WQK6JhV0ur1GNEbq7YydNJgvDjWcLxFEV4ZXlrGZIxR0IAAHVifmLEC9jPSLw0UwSTl6oJ95FNOnVfFv4haQ-jExYRhPiOgpO5xuj2iTmfGLNgnh6x6tiaaBNVgn2lf2NlBujXBe25Lz9U6bWcf_Yn6"
+  },
+  {
+    "id": "USER-008",
+    "name": "Roberto Ruiz",
+    "email": "roberto.r@floreriabautista.com",
+    "password": "admin",
+    "phone": "+52 555 444 3322",
+    "role": "staff",
+    "status": "inactive",
+    "createdAt": "2024-03-01T10:00:00Z",
+    "avatar": "https://lh3.googleusercontent.com/aida-public/AB6AXuDYJRBg-KVbmA8Y3MGRMcWEp2vwblCF2zuU7KGV8EtFPzcdQWjruYlhPblXDfqx2HVNwVOZBWuSp77WK99UOl7DOoEi6WNKS3BpVCKCf88_LwY5PNEq8mH4Y8EcqVcaEK7TBcCukysWBmpkZthqkAhjBPWvFk6yY88nlgCLJtV0XcbLknzcF0DgdVWGAu1dXtEV2FE9WlvTozibMns-n5Pqecoswknul_gBlvVlVRe3f-VvLMYwiryu0OPC6Ng0K5bWxXfaUt6v9YaB"
   }
 ]

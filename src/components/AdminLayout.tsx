@@ -1,5 +1,6 @@
-import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+
+import React, { useState } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -11,8 +12,14 @@ import {
   Settings, 
   Wrench,
   Bell,
-  LogOut
+  LogOut,
+  ChevronDown,
+  Database,
+  Activity,
+  ArrowLeftRight,
+  ShieldAlert
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -21,74 +28,145 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, user }: AdminLayoutProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isTechOpsOpen, setIsTechOpsOpen] = useState(
+    location.pathname.startsWith('/admin/operacion') || 
+    location.pathname.startsWith('/admin/respaldos') || 
+    location.pathname.startsWith('/admin/monitoreo') || 
+    location.pathname.startsWith('/admin/datos') ||
+    location.pathname.startsWith('/admin/auditoria')
+  );
 
   const handleLogout = () => {
     localStorage.removeItem('user');
     navigate('/login');
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
+  const navLinkClass = (path: string) => 
+    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+      isActive(path) 
+        ? 'bg-[#1e3a5f] text-white shadow-lg shadow-[#1e3a5f]/20' 
+        : 'text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f]'
+    }`;
+
+  const subNavLinkClass = (path: string) => 
+    `flex items-center gap-3 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
+      isActive(path) 
+        ? 'text-[#1e3a5f] bg-slate-100' 
+        : 'text-slate-400 hover:text-[#1e3a5f] hover:bg-slate-50'
+    }`;
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-100">
       {/* BEGIN: LeftSidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+      <motion.aside 
+        initial={{ x: -260 }}
+        animate={{ x: 0 }}
+        className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-20"
+      >
         {/* Logo Section */}
         <div className="h-16 flex items-center px-6 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#1e3a5f] rounded-md flex items-center justify-center text-white">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path>
-              </svg>
-            </div>
-            <span className="font-bold text-[#1e3a5f] text-lg">Florería Bautista</span>
-          </div>
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/Logo.png" alt="Logo" className="w-8 h-8 object-contain" />
+              <span className="font-bold text-lg">
+                <span className="text-[#1e3a5f]">Florería </span>
+                <span className="text-[#eab308]">Bautista</span>
+              </span>
+          </Link>
         </div>
         
         {/* Navigation Links */}
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {/* Main Dashboard Link (Active State) */}
-          <Link to="/dashboard" className="bg-[#1e3a5f] text-white flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1 custom-scrollbar">
+          <Link to="/dashboard" className={navLinkClass('/dashboard')}>
             <LayoutDashboard className="w-5 h-5" />
             Dashboard
           </Link>
           
-          {/* Other Links */}
-          <Link to="/catalogo" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          <Link to="/catalogo" className={navLinkClass('/catalogo')}>
             <ShoppingBag className="w-5 h-5" />
             Catálogo
           </Link>
-          <a href="#" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+
+          <Link to="/admin/pedidos" className={navLinkClass('/admin/pedidos')}>
             <ShoppingCart className="w-5 h-5" />
             Pedidos
-          </a>
-          <a href="#" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          </Link>
+
+          <Link to="/admin/inventario" className={navLinkClass('/admin/inventario')}>
             <Package className="w-5 h-5" />
             Inventario
-          </a>
-          <a href="#" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          </Link>
+
+          <Link to="/admin/pagos" className={navLinkClass('/admin/pagos')}>
             <CreditCard className="w-5 h-5" />
             Pagos
-          </a>
-          <a href="#" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          </Link>
+
+          <Link to="/admin/reportes" className={navLinkClass('/admin/reportes')}>
             <BarChart3 className="w-5 h-5" />
             Reportes
-          </a>
-          <a href="#" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          </Link>
+
+          <Link to="/admin/usuarios" className={navLinkClass('/admin/usuarios')}>
             <Users className="w-5 h-5" />
             Usuarios
-          </a>
+          </Link>
           
           {/* System Section Header */}
           <div className="pt-6 pb-2 px-3">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sistema</span>
           </div>
-          <a href="#" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
-            <Wrench className="w-5 h-5" />
-            Operación técnica
-          </a>
-          <a href="#" className="text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f] flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors">
+
+          {/* Technical Operations Submenu */}
+          <div>
+            <button 
+              onClick={() => setIsTechOpsOpen(!isTechOpsOpen)}
+              className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                isTechOpsOpen ? 'text-[#1e3a5f] bg-slate-50' : 'text-slate-500 hover:bg-slate-100'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Wrench className="w-5 h-5" />
+                Operación técnica
+              </div>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isTechOpsOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            <AnimatePresence>
+              {isTechOpsOpen && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden ml-4 mt-1 space-y-1 border-l-2 border-slate-100"
+                >
+                  <Link to="/admin/respaldos" className={subNavLinkClass('/admin/respaldos')}>
+                    <Database className="w-4 h-4" />
+                    Respaldos manuales
+                  </Link>
+                  <Link to="/admin/monitoreo" className={subNavLinkClass('/admin/monitoreo')}>
+                    <Activity className="w-4 h-4" />
+                    Monitoreo de sistema
+                  </Link>
+                  <Link to="/admin/datos" className={subNavLinkClass('/admin/datos')}>
+                    <ArrowLeftRight className="w-4 h-4" />
+                    Gestión de datos
+                  </Link>
+                  <Link to="/admin/auditoria" className={subNavLinkClass('/admin/auditoria')}>
+                    <ShieldAlert className="w-4 h-4" />
+                    Auditoría
+                  </Link>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <Link to="/admin/configuracion" className={navLinkClass('/admin/configuracion')}>
             <Settings className="w-5 h-5" />
             Configuración
-          </a>
+          </Link>
 
           <button 
             onClick={handleLogout}
@@ -98,13 +176,13 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             Cerrar Sesión
           </button>
         </nav>
-      </aside>
+      </motion.aside>
       {/* END: LeftSidebar */}
       
       {/* Content Wrapper */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* BEGIN: TopNavbar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0">
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 flex-shrink-0 z-10">
           {/* Left side of header */}
           <div>
             <h2 className="text-lg font-bold text-[#1e3a5f]">Panel de Administración</h2>
@@ -138,8 +216,15 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
         {/* END: TopNavbar */}
         
         {/* BEGIN: MainContentArea */}
-        <main className="flex-1 overflow-y-auto bg-white p-8">
-          {children}
+        <main className="flex-1 overflow-y-auto bg-white p-8 custom-scrollbar">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {children}
+          </motion.div>
         </main>
         {/* END: MainContentArea */}
       </div>

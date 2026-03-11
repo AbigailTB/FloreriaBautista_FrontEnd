@@ -1,0 +1,21 @@
+{
+  "storeInfo": {
+    "name": "Florería Bautista",
+    "email": "contacto@floreriabautista.com",
+    "phone": "+52 555 123 4567",
+    "currency": "MXN",
+    "address": "Av. Insurgentes Sur 1232, Col. Del Valle, CP 03100, CDMX"
+  },
+  "social": {
+    "website": "https://floreriabautista.com",
+    "instagram": "@floreria_bautista",
+    "facebook": "Florería Bautista",
+    "whatsapp": "+52 555 123 4567"
+  },
+  "notifications": {
+    "orderConfirmation": true,
+    "lowStockAlerts": true,
+    "newCustomerAlerts": false,
+    "weeklyReports": true
+  }
+}

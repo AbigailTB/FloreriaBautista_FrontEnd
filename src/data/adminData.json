@@ -1,0 +1,26 @@
+{
+  "orders": [
+    { "id": "FB-2904", "client": "Lucía Méndez", "phone": "+52 555 123 4567", "prod": "Ramo de 24 Rosas Rojas Premium", "date": "24 May, 15:00", "total": "$1,250.00", "status": "Entregado", "color": "bg-emerald-100 text-emerald-700" },
+    { "id": "FB-2905", "client": "Roberto Gómez", "phone": "+52 555 987 6543", "prod": "Arreglo Floral \"Primavera Eterna\"", "date": "Hoy, 18:30", "total": "$890.00", "status": "En Preparación", "color": "bg-blue-100 text-blue-700" },
+    { "id": "FB-2906", "client": "María José Ruiz", "phone": "+52 555 444 3322", "prod": "Caja de Orquídeas Blancas", "date": "Programado", "total": "$2,100.00", "status": "Pendiente", "color": "bg-amber-100 text-amber-700" },
+    { "id": "FB-2907", "client": "Carlos Slim Jr.", "phone": "+52 555 000 0001", "prod": "Ramo 50 Rosas Blancas Especial", "date": "En camino", "total": "$3,400.00", "status": "En Ruta", "color": "bg-indigo-100 text-indigo-700" }
+  ],
+  "inventory": [
+    { "name": "Rosas Rojas (Premium)", "sku": "FL-ROS-RED", "cat": "Flores de Corte", "stock": 45, "min": 100, "status": "Crítico", "color": "text-rose-600", "bg": "bg-rose-100" },
+    { "name": "Girasoles Grandes", "sku": "FL-GIR-LRG", "cat": "Flores de Corte", "stock": 120, "min": 50, "status": "Óptimo", "color": "text-emerald-600", "bg": "bg-emerald-100" },
+    { "name": "Espuma Floral (Ladrillo)", "sku": "INS-ESP-01", "cat": "Insumos", "stock": 15, "min": 20, "status": "Bajo", "color": "text-amber-600", "bg": "bg-amber-100" },
+    { "name": "Lazos de Seda (Rojo)", "sku": "ACC-LAZ-RED", "cat": "Accesorios", "stock": 85, "min": 30, "status": "Óptimo", "color": "text-emerald-600", "bg": "bg-emerald-100" },
+    { "name": "Papel Coreano (Negro)", "sku": "ACC-PAP-BLK", "cat": "Accesorios", "stock": 200, "min": 50, "status": "Óptimo", "color": "text-emerald-600", "bg": "bg-emerald-100" }
+  ],
+  "users": [
+    { "name": "Carlos Bautista", "role": "Administrador", "email": "carlos@floreriabautista.com", "phone": "+52 555 123 4567", "lastLogin": "Hace 5 min", "status": "Activo", "img": "https://lh3.googleusercontent.com/aida-public/AB6AXuCgTQQ5CBal8__PmS7Awrv1-fEp4q5CAO4Jt7MqYur9BTUz29a2MniHPTWKDsN2eJeL8vTqO-jMaQDCaZlW5LIJMmXBwuusCuRVHGIDhDExspzTrxR7AxSuk-wzQvi51g_i9_Rhe1U71ywspcwAjxPpDdA66-mLWUipNQAoP34Lt27PfskwxTq8OkFhAwjuNTKjgAHKimkyu7iocxIr09nI1u0fFSmgiYusQeMfs7L39kYy2NnCSMYkFfzTIgoeJCIerdglChmD-Jxc" },
+    { "name": "Ana Martínez", "role": "Vendedor", "email": "ana.m@floreriabautista.com", "phone": "+52 555 987 6543", "lastLogin": "Ayer, 18:30", "status": "Activo", "img": "https://lh3.googleusercontent.com/aida-public/AB6AXuCchIoxq4-_441MuNQx5dLnGrnETznTaw3YJk5XPgfhAZL1_Y8ppNliu5tT-kjy3rwLGHQVSKI5fBdrq_XqdWSRvHm_H7oZRhdz8PSNx0v95-oGWtCBwCH01WQK6JhV0ur1GNEbq7YydNJgvDjWcLxFEV4ZXlrGZIxR0IAAHVifmLEC9jPSLw0UwSTl6oJ95FNOnVfFv4haQ-jExYRhPiOgpO5xuj2iTmfGLNgnh6x6tiaaBNVgn2lf2NlBujXBe25Lz9U6bWcf_Yn6" },
+    { "name": "Roberto Ruiz", "role": "Repartidor", "email": "roberto.r@floreriabautista.com", "phone": "+52 555 444 3322", "lastLogin": "Hace 3 días", "status": "Inactivo", "img": "https://lh3.googleusercontent.com/aida-public/AB6AXuDYJRBg-KVbmA8Y3MGRMcWEp2vwblCF2zuU7KGV8EtFPzcdQWjruYlhPblXDfqx2HVNwVOZBWuSp77WK99UOl7DOoEi6WNKS3BpVCKCf88_LwY5PNEq8mH4Y8EcqVcaEK7TBcCukysWBmpkZthqkAhjBPWvFk6yY88nlgCLJtV0XcbLknzcF0DgdVWGAu1dXtEV2FE9WlvTozibMns-n5Pqecoswknul_gBlvVlVRe3f-VvLMYwiryu0OPC6Ng0K5bWxXfaUt6v9YaB" }
+  ],
+  "payments": [
+    { "id": "TRX-9021", "client": "Lucía Méndez", "amount": "$1,250.00", "method": "Visa **** 4242", "date": "Hoy, 14:30", "status": "Completado", "color": "text-emerald-600", "bg": "bg-emerald-100" },
+    { "id": "TRX-9022", "client": "Roberto Gómez", "amount": "$890.00", "method": "Mastercard **** 1111", "date": "Hoy, 12:15", "status": "Pendiente", "color": "text-amber-600", "bg": "bg-amber-100" },
+    { "id": "TRX-9023", "client": "María José Ruiz", "amount": "$2,100.00", "method": "Transferencia SPEI", "date": "Ayer, 18:45", "status": "Completado", "color": "text-emerald-600", "bg": "bg-emerald-100" },
+    { "id": "TRX-9024", "client": "Carlos Slim Jr.", "amount": "$3,400.00", "method": "Visa **** 0001", "date": "Ayer, 10:20", "status": "Fallido", "color": "text-rose-600", "bg": "bg-rose-100" }
+  ]
+}

@@ -10,17 +10,17 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState('premium');
   
   // Find the current product based on ID, fallback to first product if not found
-  const product = productsData.find(p => p.id === Number(id)) || productsData[0];
+  const product = productsData.find(p => p.id === id) || productsData[0];
   
-  const [mainImage, setMainImage] = useState(product.image);
+  const [mainImage, setMainImage] = useState(product.image || 'https://picsum.photos/seed/placeholder/400/400');
 
   // Update main image when product changes
   useEffect(() => {
-    setMainImage(product.image);
+    setMainImage(product.image || 'https://picsum.photos/seed/placeholder/400/400');
   }, [product]);
 
   const galleryImages = [
-    product.image,
+    product.image || 'https://picsum.photos/seed/placeholder/400/400',
     'https://lh3.googleusercontent.com/aida-public/AB6AXuCDYGKfVHfTS3ldHHOrQnerNTC1omLHOym-AQ9qBk1iYhdfo_rj8rD6r2a_b1P2WX2BrbDb9cpxaUcUldro0ebeEWkEGQzk6rNVPD7eTCFpEjsep4pilL8RPwQox-6ODBj4hhpD_NHdm7d5HIwwAojC4uC7k6N1JKrCmrrvr53Fca3M8K4lqu1yXLJzcoOkcUOc0oxxIwTeZwGvytSylJEjViohb5_UdKxM5bnKzGGvdqKqrQ6_islcvI_RseoDvsxVnJc1gPN39Zqd',
     'https://lh3.googleusercontent.com/aida-public/AB6AXuCkOQ5wDy_7FX998xfnEI-pTh5U3fC78RZSuLpzycZ6FxzzLEKNNkf-gXt5zl26kzF2oxWS5B0cr9jh7CEmmHR6Ngwq10ovIPgJb-lRaRMYnk2CnKWzkpCNe1SH4s2yTLofEH3lduYRmYTKuDDIpAgtkfXnAIdWTsN7CTJXRVypzbSFNXgl57rifciA9cgkASiK1ShiQ9KjpZx2xjJUiorxG36Hv_3ZPkkMSJjST5UkMFX6fnwmICvlRBxyTdr5UV0-nt2tTqiubTla',
     'https://lh3.googleusercontent.com/aida-public/AB6AXuBMaIvEFeqS4JnxnWCtmKGxyI8CnAszto86dLu5otmdvRd45u3dePs0jCAh3CZZHOojfhPeFSiC1sEoNR3NTOt-KU88qd2n_uRGNwcov35mSr6m5CqHIqRtYKA19HILIksYdyveX07JQbCdXjhqryydvbKqfDXxqYEg3S9JN3BASQN3fxnhluN75RALi2d6oQPS8i6rNbX_0yDpyx2QnZ35I8kxU1lAsHHAXr8k7ubYg25zFid1FTsNR3dUJ-Ejo7Fd678bKT9BPMKR'
@@ -28,7 +28,7 @@ export default function ProductPage() {
 
   // Filter out current product and get up to 4 related products
   const relatedProducts = productsData
-    .filter(p => p.id !== product.id)
+    .filter(p => p.id !== product.id && !p.isInventoryOnly)
     .slice(0, 4);
 
   return (
@@ -56,9 +56,9 @@ export default function ProductPage() {
         {/* Left Column: Images */}
         <div>
           <div className="relative rounded-2xl overflow-hidden mb-4 aspect-square bg-gray-100">
-            {product.badge && (
-              <span className={`absolute top-4 left-4 ${product.badgeBg} ${product.badgeColor} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider z-10`}>
-                {product.badge}
+            {(product as any).badge && (
+              <span className={`absolute top-4 left-4 ${(product as any).badgeBg} ${(product as any).badgeColor} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider z-10`}>
+                {(product as any).badge}
               </span>
             )}
             <img 
@@ -94,7 +94,7 @@ export default function ProductPage() {
             <span className="text-sm text-slate-500">(48 Reseñas)</span>
           </div>
           <p className="text-slate-600 mb-6 leading-relaxed">
-            {product.description}
+            {(product as any).description || 'Un hermoso arreglo floral diseñado con las flores más frescas y seleccionadas para transmitir tus mejores sentimientos.'}
           </p>
           <div className="text-3xl font-bold text-brand-deep mb-6">${product.price} MXN</div>
 
@@ -239,15 +239,15 @@ export default function ProductPage() {
                   className="absolute inset-0 bg-center bg-cover transition-transform duration-500 group-hover:scale-110" 
                   style={{ backgroundImage: `url('${product.image}')` }}
                 />
-                {product.badge && (
-                  <div className={`absolute top-4 right-4 ${product.badgeBg} px-3 py-1 rounded-full text-xs font-bold ${product.badgeColor} uppercase tracking-wider`}>
-                    {product.badge}
+                {(product as any).badge && (
+                  <div className={`absolute top-4 right-4 ${(product as any).badgeBg} px-3 py-1 rounded-full text-xs font-bold ${(product as any).badgeColor} uppercase tracking-wider`}>
+                    {(product as any).badge}
                   </div>
                 )}
               </div>
               <div className="p-6 flex flex-col flex-1">
                 <h3 className="text-xl font-bold text-brand-deep mb-2 group-hover:text-brand-coral transition-colors">{product.name}</h3>
-                <p className="text-slate-500 text-sm line-clamp-2 mb-4">{product.description}</p>
+                <p className="text-slate-500 text-sm line-clamp-2 mb-4">{(product as any).description || 'Un hermoso arreglo floral diseñado con las flores más frescas.'}</p>
                 <div className="mt-auto">
                   <div className="text-xl font-bold text-slate-900 mb-4">Desde ${product.price} MXN</div>
                   <div className="flex flex-col gap-2">

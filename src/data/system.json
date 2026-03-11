@@ -1,0 +1,30 @@
+{
+  "stats": {
+    "uptime": "99.98%",
+    "cpuLoad": "12%",
+    "ramUsage": "2.4 GB",
+    "diskSpace": "45%"
+  },
+  "services": [
+    { "name": "Base de Datos (PostgreSQL)", "status": "Operativo", "latency": "12ms", "type": "database" },
+    { "name": "API Gateway", "status": "Operativo", "latency": "45ms", "type": "gateway" },
+    { "name": "Servicio de Imágenes (CDN)", "status": "Operativo", "latency": "8ms", "type": "cdn" },
+    { "name": "Autenticación (OAuth)", "status": "Operativo", "latency": "120ms", "type": "auth" },
+    { "name": "Motor de Búsqueda", "status": "Degradado", "latency": "450ms", "type": "search", "warning": true }
+  ],
+  "errorLogs": [
+    { "time": "10:42:15", "msg": "Timeout en conexión con pasarela de pagos", "level": "Crítico" },
+    { "time": "09:15:02", "msg": "Error de validación en carga de imagen SKU-902", "level": "Advertencia" },
+    { "time": "08:30:44", "msg": "Intento de acceso no autorizado desde IP 192.168.1.1", "level": "Seguridad" }
+  ],
+  "nodeInfo": {
+    "version": "v4.2.0-stable",
+    "nodeVersion": "v20.11.0",
+    "region": "us-east-1",
+    "sslStatus": "VÁLIDO"
+  },
+  "security": {
+    "firewall": "ACTIVO",
+    "threatsBlocked": 1240
+  }
+}
