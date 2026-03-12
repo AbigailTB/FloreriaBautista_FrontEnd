@@ -39,7 +39,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
-    navigate('/login');
+    navigate('/');
   };
 
   const isActive = (path: string) => location.pathname === path;

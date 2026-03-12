@@ -89,10 +89,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="block text-sm font-semibold text-slate-700" htmlFor="password">Contraseña</label>
-                <a className="text-xs font-semibold text-brand-coral hover:underline" href="#">¿Olvidaste tu contraseña?</a>
-              </div>
+              <label className="block text-sm font-semibold text-slate-700" htmlFor="password">Contraseña</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Lock className="w-5 h-5" />
@@ -114,6 +111,9 @@ export default function LoginPage() {
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
+              </div>
+              <div className="flex justify-end">
+                <a className="text-xs font-semibold text-brand-coral hover:underline" href="#">¿Olvidaste tu contraseña?</a>
               </div>
             </div>
 

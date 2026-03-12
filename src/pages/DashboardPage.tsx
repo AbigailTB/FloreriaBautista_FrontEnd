@@ -22,6 +22,15 @@ export default function DashboardPage() {
   const [weeklySales, setWeeklySales] = useState(DataService.getWeeklySalesData());
   const [recentOrders, setRecentOrders] = useState(DataService.getOrders().slice(0, 5));
 
+  const [currentPage, setCurrentPage] = useState(0);
+  const pageSize = 3;
+  const totalPages = Math.ceil(alerts.length / pageSize);
+
+  const displayedAlerts = alerts.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+
+  const nextPage = () => setCurrentPage((prev) => (prev + 1) % totalPages);
+  const prevPage = () => setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages);
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -101,23 +110,40 @@ export default function DashboardPage() {
             </div>
             
             <div className="space-y-3">
-              {alerts.length > 0 ? alerts.map((p, idx) => (
-                <motion.div 
-                  key={idx}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="p-4 bg-red-50 border border-red-100 rounded-xl"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm font-bold text-red-700">{p.name} (Stock Bajo)</p>
-                      <p className="text-xs text-red-600/70 mt-1">Quedan {p.stock} unidades. Mínimo: {p.stock_minimo}.</p>
+              {alerts.length > 0 ? (
+                <>
+                  {displayedAlerts.map((p, idx) => (
+                    <motion.div 
+                      key={idx}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className="p-4 bg-red-50 border border-red-100 rounded-xl"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-sm font-bold text-red-700">{p.name} (Stock Bajo)</p>
+                          <p className="text-xs text-red-600/70 mt-1">Quedan {p.stock} unidades. Mínimo: {p.stock_minimo}.</p>
+                        </div>
+                        <button className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1 rounded-lg shadow-sm transition-colors shrink-0">PEDIR YA</button>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-4 mt-4">
+                      <button onClick={prevPage} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200">
+                        <ChevronRight className="w-4 h-4 rotate-180" />
+                      </button>
+                      <span className="text-xs font-bold text-slate-500">
+                        {currentPage + 1} / {totalPages}
+                      </span>
+                      <button onClick={nextPage} className="p-2 rounded-full bg-slate-100 hover:bg-slate-200">
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button className="bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1 rounded-lg shadow-sm transition-colors shrink-0">PEDIR YA</button>
-                  </div>
-                </motion.div>
-              )) : (
+                  )}
+                </>
+              ) : (
                 <p className="text-sm text-slate-500 italic">No hay alertas críticas de inventario.</p>
               )}
             </div>

@@ -2,10 +2,10 @@
   {
     "id": "USER-001",
     "name": "Josmar Bautista",
-    "email": "josmar050110@gmail.com",
+    "email": "admin@gmail.com",
     "password": "admin",
     "phone": "+52 555 123 4567",
-    "role": "admin",
+    "role": "administrador",
     "status": "active",
     "createdAt": "2024-12-01T08:00:00Z",
     "avatar": "https://lh3.googleusercontent.com/a/ACg8ocL..."
