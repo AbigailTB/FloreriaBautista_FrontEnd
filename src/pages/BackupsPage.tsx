@@ -22,7 +22,7 @@ export default function BackupsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await AdminService.getBackups();
+      const response = await AdminService.getDriveBackups();
       if (response.success && response.data) {
         setBackups(response.data);
       } else {
@@ -106,47 +106,23 @@ export default function BackupsPage() {
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-slate-50">
                     <tr>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Fecha / Hora</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Tipo</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Usuario</th>
-                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Estado</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Nombre</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Tamaño</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Creado en</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Acción</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {backups.map((backup, idx) => (
                       <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-slate-900">{backup.date}</div>
-                          <div className="text-xs text-slate-500">{backup.time}</div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{backup.type}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">
-                              {backup.user.substring(0, 2).toUpperCase()}
-                            </div>
-                            <span className="text-sm text-slate-600">{backup.user}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${backup.status === 'Completado' ? 'bg-green-100 text-green-700' : backup.status === 'Error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'} flex items-center w-fit gap-1`}>
-                            {backup.status === 'Completado' ? <CheckCircle className="w-3 h-3" /> : backup.status === 'Error' ? <XCircle className="w-3 h-3" /> : <RefreshCw className="w-3 h-3 animate-spin" />} {backup.status}
-                          </span>
-                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{backup.nombre}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{(backup.tamanoBytes / 1024).toFixed(2)} KB</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{new Date(backup.creadoEn).toLocaleString()}</td>
                         <td className="px-6 py-4 text-right">
-                          {backup.status === 'Completado' ? (
-                            <button className="inline-flex items-center gap-1.5 text-[#1e40af] hover:text-blue-700 text-sm font-bold">
-                              <Download className="w-4 h-4" />
-                              Descargar
-                            </button>
-                          ) : backup.status === 'Error' ? (
-                            <button className="text-slate-400 hover:text-slate-600">
-                              <Info className="w-5 h-5" />
-                            </button>
-                          ) : (
-                            <span className="text-slate-400 text-sm font-medium italic">Preparando...</span>
-                          )}
+                          <a href={backup.enlace} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[#1e40af] hover:text-blue-700 text-sm font-bold">
+                            <Download className="w-4 h-4" />
+                            Descargar
+                          </a>
                         </td>
                       </tr>
                     ))}

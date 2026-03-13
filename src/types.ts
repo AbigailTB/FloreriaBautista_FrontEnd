@@ -18,15 +18,30 @@ export interface HealthCheckResponse {
 
 export interface Backup {
   id: string;
-  date: string;
-  time: string;
-  type: string;
-  user: string;
-  status: 'Completado' | 'En progreso' | 'Error';
+  nombre: string;
+  tamanoBytes: number;
+  creadoEn: string;
+  enlace: string;
 }
 
 export interface BackupsResponse {
   success: boolean;
   message: string;
   data: Backup[] | null;
+}
+
+export interface MaintenanceTask {
+  tarea: string;
+  estado: 'COMPLETADO' | 'ERROR';
+  detalle: string;
+  mensajeError: string | null;
+  ejecutadoEn: string;
+  duracionMs: number;
+  resultados: string[];
+}
+
+export interface MaintenanceResponse {
+  success: boolean;
+  message: string;
+  data: MaintenanceTask[];
 }

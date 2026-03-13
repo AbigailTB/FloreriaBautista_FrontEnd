@@ -11,14 +11,17 @@ import {
   CheckCircle2,
   RefreshCw,
   HardDrive,
-  Server
+  Server,
+  Wrench
 } from 'lucide-react';
 import { AdminService } from '../services/adminService';
-import { HealthCheckResponse } from '../types';
+import { HealthCheckResponse, MaintenanceTask } from '../types';
 
 export default function AdminSystemMonitoringPage() {
   const [systemInfo, setSystemInfo] = useState<HealthCheckResponse | null>(null);
+  const [maintenanceResults, setMaintenanceResults] = useState<MaintenanceTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadInfo = async () => {
@@ -31,6 +34,18 @@ export default function AdminSystemMonitoringPage() {
       setError('Error al cargar la información del sistema');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runMaintenance = async () => {
+    setMaintenanceLoading(true);
+    try {
+      const response = await AdminService.runMaintenance();
+      setMaintenanceResults(response.data);
+    } catch (err) {
+      setError('Error al ejecutar mantenimiento');
+    } finally {
+      setMaintenanceLoading(false);
     }
   };
 
@@ -116,16 +131,29 @@ export default function AdminSystemMonitoringPage() {
           </div>
         </div>
 
-        {/* System Info Sidebar */}
+        {/* Maintenance */}
         <div className="space-y-6">
-          <div className="bg-[#1e3a5f] rounded-2xl p-6 text-white shadow-xl shadow-[#1e3a5f]/20">
-            <h3 className="text-xs font-bold text-blue-200 uppercase tracking-[0.2em] mb-6">INFORMACIÓN DE NODO</h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-white/10 pb-3">
-                <span className="text-xs text-blue-200">Estado</span>
-                <span className="text-sm font-bold">{data.estado}</span>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-6">
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
+              <Wrench className="w-4 h-4 text-[#1e3a5f]" /> Mantenimiento
+            </h3>
+            <button 
+              onClick={runMaintenance}
+              disabled={maintenanceLoading}
+              className="w-full bg-[#1e3a5f] text-white py-2 rounded-lg text-sm font-bold hover:bg-[#1e3a5f]/90 disabled:opacity-50"
+            >
+              {maintenanceLoading ? 'Ejecutando...' : 'Ejecutar mantenimiento'}
+            </button>
+            {maintenanceResults.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {maintenanceResults.map((task, idx) => (
+                  <div key={idx} className={`p-2 rounded text-xs ${task.estado === 'COMPLETADO' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                    <p className="font-bold">{task.tarea}: {task.estado}</p>
+                    {task.mensajeError && <p className="text-[10px]">{task.mensajeError}</p>}
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
