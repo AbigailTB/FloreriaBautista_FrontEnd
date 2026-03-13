@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -17,9 +17,11 @@ import {
   Database,
   Activity,
   ArrowLeftRight,
-  ShieldAlert
+  ShieldAlert,
+  Cloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import api from '../services/api';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -36,6 +38,21 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
     location.pathname.startsWith('/admin/datos') ||
     location.pathname.startsWith('/admin/auditoria')
   );
+  const [serverStatus, setServerStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        await api.get('/api/health');
+        setServerStatus('connected');
+        console.log('Conexión al backend exitosa');
+      } catch (error) {
+        setServerStatus('disconnected');
+        console.error('Error al conectar al backend', error);
+      }
+    };
+    checkConnection();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -176,6 +193,19 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             Cerrar Sesión
           </button>
         </nav>
+
+        {/* Server Status Indicator */}
+        <div className="p-4 border-t border-white/10">
+          <div className={`flex items-center gap-3 p-3 rounded-xl ${serverStatus === 'connected' ? 'bg-white/10' : 'bg-red-900/50'}`}>
+            <Cloud className={`w-6 h-6 ${serverStatus === 'connected' ? 'text-emerald-400' : 'text-red-400'}`} />
+            <div>
+              <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Estado del servidor</p>
+              <p className={`text-xs font-semibold ${serverStatus === 'connected' ? 'text-white' : 'text-red-200'}`}>
+                {serverStatus === 'checking' ? 'Verificando...' : serverStatus === 'connected' ? 'Conectado y Seguro' : 'Desconectado'}
+              </p>
+            </div>
+          </div>
+        </div>
       </motion.aside>
       {/* END: LeftSidebar */}
       

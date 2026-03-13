@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import api from '../services/api';
 
 export default function LoginPage() {
@@ -9,6 +9,20 @@ export default function LoginPage() {
   const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [connectionSuccess, setConnectionSuccess] = useState(false);
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        await api.get('/api/health');
+        setConnectionSuccess(true);
+        setTimeout(() => setConnectionSuccess(false), 5000);
+      } catch (err) {
+        console.error('Error al conectar al backend', err);
+      }
+    };
+    checkConnection();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +68,16 @@ export default function LoginPage() {
       {/* Split Layout: Form Side */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-white">
         <div className="w-full max-w-md space-y-8">
+          {/* Connection Success Message */}
+          {connectionSuccess && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+              <p className="text-sm text-emerald-700">
+                Conexión a webservices exitosa.
+              </p>
+            </div>
+          )}
+          
           <div className="mb-8">
             <button 
               onClick={() => navigate(-1)}
