@@ -1,27 +1,38 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import usersData from '../data/users.json';
+import api from '../services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [correo, setCorreo] = useState('');
+  const [contrasena, setContrasena] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const user = usersData.find(u => u.email === email && u.password === password);
+    try {
+      const response = await api.post('/api/auth/login', {
+        correo,
+        contrasena,
+      });
 
-    if (user) {
-      // For demonstration, we'll just save to localStorage
-      localStorage.setItem('user', JSON.stringify(user));
-      navigate('/dashboard');
-    } else {
-      setError('Los datos ingresados no son válidos. Por favor, verifica tu correo y contraseña.');
+      if (response.data.success) {
+        const { accessToken, usuario } = response.data.data;
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('usuario', JSON.stringify(usuario));
+
+        if (usuario.roles.includes('ADMIN')) {
+          navigate('/admin/dashboard');
+        } else {
+          navigate('/home');
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Los datos ingresados no son válidos.');
     }
   };
 
@@ -70,38 +81,38 @@ export default function LoginPage() {
 
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700" htmlFor="email">Correo electrónico</label>
+              <label className="block text-sm font-semibold text-slate-700" htmlFor="correo">Correo electrónico</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Mail className="w-5 h-5" />
                 </span>
                 <input 
                   className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none transition-all" 
-                  id="email" 
-                  name="email" 
+                  id="correo" 
+                  name="correo" 
                   placeholder="ejemplo@correo.com" 
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={correo}
+                  onChange={(e) => setCorreo(e.target.value)}
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700" htmlFor="password">Contraseña</label>
+              <label className="block text-sm font-semibold text-slate-700" htmlFor="contrasena">Contraseña</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
                   <Lock className="w-5 h-5" />
                 </span>
                 <input 
                   className="block w-full pl-10 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-coral/20 focus:border-brand-coral outline-none transition-all" 
-                  id="password" 
-                  name="password" 
+                  id="contrasena" 
+                  name="contrasena" 
                   placeholder="••••••••" 
                   type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
                   required
                 />
                 <button 
@@ -124,7 +135,7 @@ export default function LoginPage() {
               Iniciar sesión
             </button>
           </form>
-
+          
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-slate-200"></span>

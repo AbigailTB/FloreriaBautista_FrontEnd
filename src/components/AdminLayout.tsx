@@ -47,15 +47,15 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
   const navLinkClass = (path: string) => 
     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
       isActive(path) 
-        ? 'bg-[#1e3a5f] text-white shadow-lg shadow-[#1e3a5f]/20' 
-        : 'text-slate-500 hover:bg-slate-100 hover:text-[#1e3a5f]'
+        ? 'bg-white text-[#1e3a5f] shadow-lg' 
+        : 'text-slate-200 hover:bg-white/10 hover:text-white'
     }`;
 
   const subNavLinkClass = (path: string) => 
     `flex items-center gap-3 px-4 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
       isActive(path) 
-        ? 'text-[#1e3a5f] bg-slate-100' 
-        : 'text-slate-400 hover:text-[#1e3a5f] hover:bg-slate-50'
+        ? 'text-white bg-white/20' 
+        : 'text-slate-300 hover:text-white hover:bg-white/10'
     }`;
 
   return (
@@ -64,14 +64,14 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
       <motion.aside 
         initial={{ x: -260 }}
         animate={{ x: 0 }}
-        className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0 z-20"
+        className="w-64 bg-[#1e3a5f] border-r border-gray-900 shadow-2xl flex flex-col flex-shrink-0 z-20"
       >
         {/* Logo Section */}
-        <div className="h-16 flex items-center px-6 border-b border-gray-100">
+        <div className="h-16 flex items-center px-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-2">
             <img src="/Logo.png" alt="Logo" className="w-8 h-8 object-contain" />
               <span className="font-bold text-lg">
-                <span className="text-[#1e3a5f]">Florería </span>
+                <span className="text-white">Florería </span>
                 <span className="text-[#eab308]">Bautista</span>
               </span>
           </Link>
@@ -116,7 +116,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
           
           {/* System Section Header */}
           <div className="pt-6 pb-2 px-3">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sistema</span>
+            <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">Sistema</span>
           </div>
 
           {/* Technical Operations Submenu */}
@@ -124,7 +124,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             <button 
               onClick={() => setIsTechOpsOpen(!isTechOpsOpen)}
               className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isTechOpsOpen ? 'text-[#1e3a5f] bg-slate-50' : 'text-slate-500 hover:bg-slate-100'
+                isTechOpsOpen ? 'text-white bg-white/10' : 'text-slate-200 hover:bg-white/10'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -170,7 +170,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
 
           <button 
             onClick={handleLogout}
-            className="w-full text-red-500 hover:bg-red-50 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mt-8"
+            className="w-full text-red-300 hover:bg-red-900/50 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mt-8"
           >
             <LogOut className="w-5 h-5" />
             Cerrar Sesión
