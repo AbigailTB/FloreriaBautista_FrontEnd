@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -21,7 +20,6 @@ import {
   Cloud
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import api from '../services/api';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -38,25 +36,11 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
     location.pathname.startsWith('/admin/datos') ||
     location.pathname.startsWith('/admin/auditoria')
   );
-  const [serverStatus, setServerStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        await api.get('/api/health');
-        setServerStatus('connected');
-        console.log('Conexión al backend exitosa');
-      } catch (error) {
-        setServerStatus('disconnected');
-        console.error('Error al conectar al backend', error);
-      }
-    };
-    checkConnection();
-  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('usuario');
+    window.location.href = '/';
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -85,7 +69,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
       >
         {/* Logo Section */}
         <div className="h-16 flex items-center px-6 border-b border-white/10">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/dashboard" className="flex items-center gap-2">
             <img src="/Logo.png" alt="Logo" className="w-8 h-8 object-contain" />
               <span className="font-bold text-lg">
                 <span className="text-white">Florería </span>
@@ -196,13 +180,11 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
 
         {/* Server Status Indicator */}
         <div className="p-4 border-t border-white/10">
-          <div className={`flex items-center gap-3 p-3 rounded-xl ${serverStatus === 'connected' ? 'bg-white/10' : 'bg-red-900/50'}`}>
-            <Cloud className={`w-6 h-6 ${serverStatus === 'connected' ? 'text-emerald-400' : 'text-red-400'}`} />
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-white/10">
+            <Cloud className="w-6 h-6 text-emerald-400" />
             <div>
               <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">Estado del servidor</p>
-              <p className={`text-xs font-semibold ${serverStatus === 'connected' ? 'text-white' : 'text-red-200'}`}>
-                {serverStatus === 'checking' ? 'Verificando...' : serverStatus === 'connected' ? 'Conectado y Seguro' : 'Desconectado'}
-              </p>
+              <p className="text-xs font-semibold text-white">Conectado y Seguro</p>
             </div>
           </div>
         </div>

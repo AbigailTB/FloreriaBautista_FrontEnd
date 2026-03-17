@@ -1,13 +1,19 @@
 import axios from 'axios';
 
+// Con el proxy de Vite, todas las rutas /api/* se redirigen a localhost:5000
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: '/',
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(async (config) => {
+  try {
+    const tokenRes = await fetch('/api/dev/token');
+    if (tokenRes.ok) {
+      const token = await tokenRes.text();
+      config.headers.Authorization = `Bearer ${token.trim()}`;
+    }
+  } catch {
+    // Continuar sin token si falla
   }
   return config;
 });

@@ -32,7 +32,7 @@ export default function DashboardPage() {
   const prevPage = () => setCurrentPage((prev) => (prev - 1 + totalPages) % totalPages);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem('usuario');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }

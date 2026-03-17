@@ -23,16 +23,16 @@ import AdminDataManagementPage from '../pages/AdminDataManagementPage';
 import AdminSystemMonitoringPage from '../pages/AdminSystemMonitoringPage';
 import AdminAuditPage from '../pages/AdminAuditPage';
 import PageTransition from './PageTransition';
-
+ 
 export default function AnimatedRoutes() {
   const location = useLocation();
-
+ 
   return (
     <AnimatePresence mode="wait">
-      {/* @ts-ignore - React Router v6 Routes component doesn't explicitly type the key prop but it's required for AnimatePresence */}
-      <Routes location={location} key={location.pathname}>
+      <Routes location={location}>
         <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
         <Route path="/dashboard" element={<PageTransition><DashboardPage /></PageTransition>} />
+        <Route path="/admin/dashboard" element={<PageTransition><DashboardPage /></PageTransition>} />
         <Route path="/admin/reportes" element={<PageTransition><ReportsPage /></PageTransition>} />
         <Route path="/admin/productos/nuevo" element={<PageTransition><ProductManagementPage /></PageTransition>} />
         <Route path="/admin/productos/editar/:id" element={<PageTransition><ProductManagementPage /></PageTransition>} />
