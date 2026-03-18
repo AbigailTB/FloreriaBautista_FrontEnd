@@ -1,0 +1,408 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ChevronRight, ChevronLeft, Star, Check, Lock, ShoppingCart, Sparkles, MessageCircle, Info, HelpCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import productsData from '../../data/products.json';
+import { useCart } from '../../hooks/useCart';
+import { FadeIn, ScaleIn, StaggerContainer, AnimatedButton, GlassCard } from '../../components/Animations';
+import { useToast } from '../../hooks/useToast';
+
+export default function ProductPage({ user: initialUser }: { user?: any }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [selectedSize, setSelectedSize] = useState('premium');
+  const { addToCart } = useCart();
+  const [user, setUser] = useState<any>(initialUser);
+
+  useEffect(() => {
+    if (!initialUser) {
+      const storedUser = localStorage.getItem('usuario') || localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    }
+  }, [initialUser]);
+  
+  // Find the current product based on ID, fallback to first product if not found
+  const product = productsData.find(p => p.id === id) || productsData[0];
+  
+  const [mainImage, setMainImage] = useState(product.image || 'https://picsum.photos/seed/placeholder/400/400');
+
+  // Update main image when product changes
+  useEffect(() => {
+    setMainImage(product.image || 'https://picsum.photos/seed/placeholder/400/400');
+  }, [product]);
+
+  const galleryImages = [
+    product.image || 'https://picsum.photos/seed/placeholder/400/400',
+    'https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&q=80&w=800',
+    'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&q=80&w=800',
+    'https://images.unsplash.com/photo-1591886960571-74d43a9d4166?auto=format&fit=crop&q=80&w=800'
+  ];
+
+  // Filter out current product and get up to 4 related products
+  const relatedProducts = productsData
+    .filter(p => p.id !== product.id && !p.isInventoryOnly)
+    .slice(0, 4);
+
+  const handleAddToCart = (p: any) => {
+    if (user && (user.role === 'cliente' || user.role === 'customer')) {
+      addToCart(p);
+      showToast(`${p.name} añadido al carrito`, 'success');
+    } else {
+      setIsLoginModalOpen(true);
+    }
+  };
+
+  return (
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-32 min-h-screen font-display bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      {/* Back Button */}
+      <FadeIn>
+        <button 
+          onClick={() => navigate(-1)} 
+          className="group flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-brand-coral transition-colors mb-6 font-bold uppercase tracking-widest text-xs"
+        >
+          <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center group-hover:bg-brand-coral group-hover:text-white transition-all">
+            <ChevronLeft className="w-4 h-4" />
+          </div>
+          Volver al catálogo
+        </button>
+      </FadeIn>
+
+      {/* Breadcrumbs */}
+      <FadeIn delay={0.1}>
+        <nav aria-label="Breadcrumb" className="flex items-center text-sm text-slate-400 mb-10">
+          <Link to="/" className="hover:text-brand-coral transition-colors">Inicio</Link>
+          <ChevronRight className="w-4 h-4 mx-2 opacity-50" />
+          <Link to="/catalogo" className="hover:text-brand-coral transition-colors">Catálogo</Link>
+          <ChevronRight className="w-4 h-4 mx-2 opacity-50" />
+          <span className="font-bold text-slate-900 dark:text-white">{product.name}</span>
+        </nav>
+      </FadeIn>
+
+      {/* Product Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-24">
+        {/* Left Column: Images */}
+        <FadeIn delay={0.2}>
+          <div className="space-y-6">
+            <div className="relative rounded-[2.5rem] overflow-hidden aspect-square bg-white dark:bg-slate-800 shadow-2xl border border-slate-200/50 dark:border-slate-700/50">
+              <AnimatePresence mode="wait">
+                <motion.img 
+                  key={mainImage}
+                  initial={{ opacity: 0, scale: 1.1 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.4 }}
+                  alt={product.name} 
+                  className="w-full h-full object-cover" 
+                  src={mainImage} 
+                />
+              </AnimatePresence>
+              {(product as any).badge && (
+                <div className="absolute top-8 left-0 bg-brand-coral text-white px-8 py-2 font-black text-xs uppercase tracking-[0.2em] rounded-r-full shadow-xl z-10">
+                  {(product as any).badge}
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {galleryImages.map((img, idx) => (
+                <motion.button 
+                  key={idx}
+                  whileHover={{ y: -4 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setMainImage(img)}
+                  className={`rounded-2xl overflow-hidden aspect-square border-2 transition-all shadow-md ${mainImage === img ? 'border-brand-coral ring-4 ring-brand-coral/10' : 'border-white dark:border-slate-800 hover:border-brand-coral/50'}`}
+                >
+                  <img className="w-full h-full object-cover" src={img} alt={`Gallery ${idx}`} />
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* Right Column: Details & Options */}
+        <FadeIn delay={0.3}>
+          <div className="flex flex-col h-full">
+            <div className="mb-8">
+              <span className="text-brand-coral font-black text-xs uppercase tracking-[0.3em] mb-3 block">
+                Colección Premium
+              </span>
+              <h1 className="text-5xl lg:text-6xl font-black text-slate-900 dark:text-white mb-4 leading-tight">
+                {product.name}
+              </h1>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-5 h-5 fill-current" />
+                  ))}
+                </div>
+                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">(48 Reseñas Verificadas)</span>
+              </div>
+              <div className="text-4xl font-black text-slate-900 dark:text-white">
+                ${product.price} <span className="text-lg font-bold text-slate-400 ml-2 uppercase tracking-widest">MXN</span>
+              </div>
+            </div>
+
+            <p className="text-lg text-slate-500 dark:text-slate-400 mb-10 leading-relaxed">
+              {(product as any).description || 'Un hermoso arreglo floral diseñado con las flores más frescas y seleccionadas para transmitir tus mejores sentimientos.'}
+            </p>
+
+            {/* Customization Form */}
+            <div className="space-y-10">
+              {/* Size Selector */}
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-400 mb-4 tracking-[0.2em]">Selecciona el tamaño</label>
+                <div className="grid grid-cols-3 gap-4">
+                  {['estandar', 'deluxe', 'premium'].map((size) => (
+                    <button 
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`relative p-5 rounded-2xl text-center transition-all border-2 flex flex-col items-center justify-center gap-1 ${selectedSize === size ? 'border-brand-coral bg-brand-coral/5 shadow-lg shadow-brand-coral/5' : 'border-slate-200 dark:border-slate-800 hover:border-brand-coral/30'}`}
+                    >
+                      <div className={`text-[10px] font-black uppercase tracking-widest ${selectedSize === size ? 'text-brand-coral' : 'text-slate-400'}`}>
+                        {size}
+                      </div>
+                      <div className="text-lg font-black text-slate-900 dark:text-white">
+                        ${size === 'estandar' ? product.price : size === 'deluxe' ? product.price + 200 : product.price + 350}
+                      </div>
+                      {selectedSize === size && (
+                        <motion.div layoutId="size-check" className="absolute -top-2 -right-2 w-6 h-6 bg-brand-coral rounded-full flex items-center justify-center text-white shadow-lg">
+                          <Check className="w-3 h-3 stroke-[4px]" />
+                        </motion.div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extras & Message */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <label className="block text-xs font-black uppercase text-slate-400 mb-4 tracking-[0.2em]">Personalización</label>
+                  <label className="flex items-center gap-3 cursor-pointer group p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-coral transition-all">
+                    <input className="w-5 h-5 rounded-lg border-slate-300 text-brand-coral focus:ring-brand-coral" type="checkbox" />
+                    <span className="text-sm font-bold text-slate-600 dark:text-slate-300">Tarjeta de regalo</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer group p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-coral transition-all">
+                    <input className="w-5 h-5 rounded-lg border-slate-300 text-brand-coral focus:ring-brand-coral" type="checkbox" />
+                    <span className="text-sm font-bold text-slate-600 dark:text-slate-300">Envío anónimo</span>
+                  </label>
+                </div>
+                <div className="space-y-4">
+                  <label className="block text-xs font-black uppercase text-slate-400 mb-4 tracking-[0.2em]">Fecha de entrega</label>
+                  <input className="w-full border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl focus:ring-brand-coral focus:border-brand-coral px-5 py-4 border font-bold" type="date" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase text-slate-400 mb-4 tracking-[0.2em]">Mensaje personalizado</label>
+                <textarea className="w-full border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl focus:ring-brand-coral focus:border-brand-coral resize-none px-5 py-4 border font-medium min-h-[120px]" placeholder="Escribe aquí tu dedicatoria..." rows={3}></textarea>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4">
+                <AnimatedButton 
+                  className="flex-1 bg-brand-coral text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-brand-coral/20 flex items-center justify-center gap-3"
+                  onClick={() => handleAddToCart(product)}
+                >
+                  <ShoppingCart className="w-6 h-6" />
+                  Añadir al Carrito
+                </AnimatedButton>
+                <AnimatedButton className="w-20 h-20 flex items-center justify-center bg-green-500 text-white rounded-2xl shadow-xl shadow-green-500/20">
+                  <MessageCircle className="w-8 h-8" />
+                </AnimatedButton>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+
+      {/* Detailed Info */}
+      <section className="py-24 border-t border-slate-200 dark:border-slate-800">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-16">
+          <FadeIn>
+            <div className="space-y-8">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-coral/10 flex items-center justify-center">
+                  <Info className="w-6 h-6 text-brand-coral" />
+                </div>
+                Especificaciones
+              </h3>
+              <ul className="space-y-6">
+                {[
+                  { label: 'Altura', value: '60 cm aprox.' },
+                  { label: 'Contenido', value: '24 Rosas Premium' },
+                  { label: 'Follaje', value: 'Eucalipto y Ruscus' },
+                  { label: 'Extras', value: 'Moño y Alimento' }
+                ].map((spec, i) => (
+                  <li key={i} className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <span className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">{spec.label}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{spec.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={0.1}>
+            <div className="space-y-8">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-400/10 flex items-center justify-center">
+                  <Star className="w-6 h-6 text-yellow-500" />
+                </div>
+                Reseñas
+              </h3>
+              <div className="space-y-8">
+                {[
+                  { name: 'María G.', text: 'Las rosas más hermosas que he recibido. El aroma es increíble.' },
+                  { name: 'Ricardo S.', text: 'Excelente servicio, llegaron puntual y el mensaje quedó perfecto.' }
+                ].map((review, i) => (
+                  <div key={i} className="relative p-6 rounded-3xl bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <div className="flex justify-between mb-3">
+                      <span className="font-black text-sm uppercase tracking-widest">{review.name}</span>
+                      <div className="flex text-yellow-400">
+                        {[...Array(5)].map((_, j) => <Star key={j} className="w-3 h-3 fill-current" />)}
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">"{review.text}"</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+
+          <FadeIn delay={0.2}>
+            <div className="space-y-8">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                  <HelpCircle className="w-6 h-6 text-blue-500" />
+                </div>
+                Preguntas
+              </h3>
+              <div className="space-y-4">
+                {[
+                  { q: '¿Cómo cuido mi ramo?', a: 'Corta tallos 2cm en diagonal y cambia agua cada 2 días.' },
+                  { q: '¿A qué zonas envían?', a: 'Entregas en toda la región Huitzitzilingo-Orizatlán.' }
+                ].map((faq, i) => (
+                  <details key={i} className="group bg-white dark:bg-slate-800 rounded-2xl p-6 cursor-pointer border border-slate-100 dark:border-slate-700 transition-all hover:border-brand-coral">
+                    <summary className="list-none flex justify-between items-center text-sm font-bold uppercase tracking-widest">
+                      {faq.q}
+                      <ChevronRight className="w-4 h-4 group-open:rotate-90 transition-transform" />
+                    </summary>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 leading-relaxed">{faq.a}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </FadeIn>
+        </StaggerContainer>
+      </section>
+
+      {/* Related Products */}
+      <section className="py-24 border-t border-slate-200 dark:border-slate-800">
+        <FadeIn>
+          <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-12">También te podría gustar</h2>
+        </FadeIn>
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          {relatedProducts.map((p) => (
+            <ScaleIn key={p.id}>
+              <GlassCard className="group h-full flex flex-col overflow-hidden border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl hover:shadow-brand-coral/5 transition-all duration-500">
+                <div className="relative aspect-[4/5] overflow-hidden">
+                  <motion.div 
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ duration: 0.6 }}
+                    className="absolute inset-0 bg-center bg-cover" 
+                    style={{ backgroundImage: `url('${p.image}')` }}
+                  />
+                  {p.stock <= 5 && (
+                    <div className="absolute top-6 right-0 bg-orange-500 text-white px-4 py-1.5 font-black text-[10px] uppercase tracking-widest rounded-l-full shadow-lg z-10">
+                      Pocas unidades
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-8 flex flex-col flex-1">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="text-[10px] font-black text-brand-coral uppercase tracking-widest mb-1 block">
+                        {p.category}
+                      </span>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-brand-coral transition-colors duration-300">
+                        {p.name}
+                      </h3>
+                    </div>
+                    <div className="text-xl font-black text-slate-900 dark:text-white">
+                      ${p.price}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-auto space-y-3">
+                    <Link to={`/producto/${p.id}`} className="block">
+                      <AnimatedButton className="w-full py-3.5 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-2xl font-bold text-sm">
+                        Ver Detalles
+                      </AnimatedButton>
+                    </Link>
+                    <AnimatedButton 
+                      onClick={() => handleAddToCart(p)}
+                      className="w-full py-3.5 bg-brand-coral text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-brand-coral/20"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      Añadir al Carrito
+                    </AnimatedButton>
+                  </div>
+                </div>
+              </GlassCard>
+            </ScaleIn>
+          ))}
+        </StaggerContainer>
+      </section>
+
+      {/* Login Modal */}
+      <AnimatePresence>
+        {isLoginModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" 
+              onClick={() => setIsLoginModalOpen(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white dark:bg-slate-800 p-10 rounded-[2.5rem] shadow-2xl max-w-md w-full text-center border border-white/10"
+            >
+              <div className="w-20 h-20 bg-brand-coral/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                <Lock className="w-10 h-10 text-brand-coral" />
+              </div>
+              <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">¡Inicia sesión para continuar!</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-10 text-lg">Para añadir productos a tu pedido necesitas tener una cuenta activa.</p>
+              <div className="flex flex-col gap-4">
+                <Link to="/login">
+                  <AnimatedButton className="w-full bg-brand-coral text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-brand-coral/20">
+                    Iniciar sesión
+                  </AnimatedButton>
+                </Link>
+                <Link to="/registro">
+                  <AnimatedButton className="w-full border-2 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white py-5 rounded-2xl font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-700">
+                    Crear cuenta
+                  </AnimatedButton>
+                </Link>
+              </div>
+              <button 
+                className="mt-8 text-slate-400 hover:text-brand-coral text-sm font-bold uppercase tracking-widest transition-colors"
+                onClick={() => setIsLoginModalOpen(false)}
+              >
+                Tal vez luego
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </main>
+  );
+}

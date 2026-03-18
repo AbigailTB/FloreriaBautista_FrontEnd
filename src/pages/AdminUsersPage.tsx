@@ -168,7 +168,7 @@ export default function AdminUsersPage() {
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <img src={user.avatar} alt={user.name} className="size-10 rounded-full object-cover border border-slate-200" referrerPolicy="no-referrer" />
+                              <img src={user.avatar || null} alt={user.name} className="size-10 rounded-full object-cover border border-slate-200" referrerPolicy="no-referrer" />
                           <div>
                             <p className="text-sm font-bold text-slate-900">{user.name}</p>
                             <p className="text-xs text-slate-500">ID: #{user.id}</p>

@@ -22,6 +22,7 @@ import AdminSettingsPage from '../pages/AdminSettingsPage';
 import AdminDataManagementPage from '../pages/AdminDataManagementPage';
 import AdminSystemMonitoringPage from '../pages/AdminSystemMonitoringPage';
 import AdminAuditPage from '../pages/AdminAuditPage';
+import CustomerOrdersPage from '../pages/CustomerOrdersPage';
 import PageTransition from './PageTransition';
  
 export default function AnimatedRoutes() {
@@ -47,6 +48,7 @@ export default function AnimatedRoutes() {
         <Route path="/admin/monitoreo" element={<PageTransition><AdminSystemMonitoringPage /></PageTransition>} />
         <Route path="/admin/auditoria" element={<PageTransition><AdminAuditPage /></PageTransition>} />
         <Route path="/admin/configuracion" element={<PageTransition><AdminSettingsPage /></PageTransition>} />
+        <Route path="/mis-pedidos" element={<PageTransition><CustomerOrdersPage /></PageTransition>} />
         <Route path="/catalogo" element={<PageTransition><CatalogPage /></PageTransition>} />
         <Route path="/producto/:id" element={<PageTransition><ProductPage /></PageTransition>} />
         <Route path="/testimonios" element={<PageTransition><TestimonialsPage /></PageTransition>} />

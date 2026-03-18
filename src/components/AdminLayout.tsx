@@ -203,10 +203,10 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
           {/* Right side of header */}
           <div className="flex items-center gap-6">
             {/* Notification Icon */}
-            <button className="relative p-2 text-gray-400 hover:text-[#1e3a5f] transition-colors">
+            <Link to="/notificaciones" className="relative p-2 text-gray-400 hover:text-[#1e3a5f] transition-colors">
               <Bell className="w-6 h-6" />
               <span className="absolute top-2 right-2 block h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white"></span>
-            </button>
+            </Link>
             
             {/* User Profile */}
             <div className="flex items-center gap-3">
@@ -228,12 +228,13 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
         {/* END: TopNavbar */}
         
         {/* BEGIN: MainContentArea */}
-        <main className="flex-1 overflow-y-auto bg-white p-8 custom-scrollbar">
+        <main className="flex-1 overflow-y-auto bg-slate-100 p-4 md:p-6 lg:p-8 custom-scrollbar">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="bg-white rounded-[2rem] shadow-sm p-6 md:p-8 min-h-full flex flex-col w-full"
           >
             {children}
           </motion.div>

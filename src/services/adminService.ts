@@ -89,4 +89,17 @@ export const AdminService = {
     if (!res.ok) throw new Error('Error al crear respaldo de tabla');
     return res.json();
   },
+
+  saveBackupConfig: async (
+    frecuencia: string,
+    hora: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE}/backups/config`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ frecuencia, hora }),
+    });
+    if (!res.ok) throw new Error('Error al guardar configuración de respaldos');
+    return res.json();
+  },
 };
