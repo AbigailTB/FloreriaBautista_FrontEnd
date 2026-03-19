@@ -19,8 +19,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { DataService, User } from '../../services/dataService';
 import { FadeIn, ScaleIn, StaggerContainer, GlassCard, AnimatedButton } from '../../components/Animations';
 import { useToast } from '../../hooks/useToast';
+import { useNavigate } from 'react-router-dom'; 
 
 export default function AdminUsersPage() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('Todos los Roles');
   const [users, setUsers] = useState<User[]>([]);
@@ -124,7 +126,7 @@ export default function AdminUsersPage() {
             <p className="text-sm text-slate-500 font-medium">Administra el personal y sus niveles de acceso al sistema</p>
           </div>
           <AnimatedButton 
-            onClick={() => setIsNewUserModalOpen(true)}
+            onClick={() => navigate('/admin/usuarios/nuevo')}
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black hover:bg-blue-700 shadow-xl shadow-blue-600/20 transition-all"
           >
             <UserPlus className="w-4 h-4" />
@@ -296,90 +298,6 @@ export default function AdminUsersPage() {
           </div>
         </GlassCard>
       </FadeIn>
-
-      {/* New User Modal */}
-      <AnimatePresence>
-        {isNewUserModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
-              onClick={() => setIsNewUserModalOpen(false)}
-            ></motion.div>
-            <ScaleIn className="relative bg-white p-8 rounded-[2rem] shadow-2xl max-w-xl w-full border border-white/20">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-black text-slate-900">Nuevo Usuario</h3>
-                <button onClick={() => setIsNewUserModalOpen(false)} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-slate-900 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
-              </div>
-              
-              <div className="space-y-4 mb-8">
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Nombre Completo *</label>
-                  <input 
-                    type="text" 
-                    value={newUser.name}
-                    onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                    placeholder="Ej. Juan Pérez"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Correo Electrónico *</label>
-                  <input 
-                    type="email" 
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                    placeholder="juan@ejemplo.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Rol</label>
-                  <select 
-                    value={newUser.role}
-                    onChange={(e) => setNewUser({...newUser, role: e.target.value})}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                  >
-                    <option value="staff">Personal</option>
-                    <option value="admin">Administrador</option>
-                    <option value="customer">Cliente</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-500">Estado</label>
-                  <select 
-                    value={newUser.status}
-                    onChange={(e) => setNewUser({...newUser, status: e.target.value})}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-bold"
-                  >
-                    <option value="active">Activo</option>
-                    <option value="inactive">Inactivo</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-4">
-                <button 
-                  onClick={() => setIsNewUserModalOpen(false)}
-                  className="px-6 py-3 rounded-xl font-black text-slate-500 hover:bg-slate-100 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <AnimatedButton 
-                  onClick={handleAddUser}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-xl font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors"
-                >
-                  Crear Usuario
-                </AnimatedButton>
-              </div>
-            </ScaleIn>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

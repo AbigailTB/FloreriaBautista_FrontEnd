@@ -21,6 +21,7 @@ import BackupsPage from '../pages/admin/BackupsPage';
 import AdminInventoryPage from '../pages/admin/AdminInventoryPage';
 import AdminPaymentsPage from '../pages/admin/AdminPaymentsPage';
 import AdminUsersPage from '../pages/admin/AdminUsersPage';
+import AdminNewUserPage from '../pages/admin/AdminNewUserPage';
 import AdminOperationPage from '../pages/admin/AdminOperationPage';
 import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
 import AdminDataManagementPage from '../pages/admin/AdminDataManagementPage';
@@ -54,6 +55,7 @@ export default function AnimatedRoutes() {
         <Route path="/admin/inventario" element={<PageTransition><AdminInventoryPage /></PageTransition>} />
         <Route path="/admin/pagos" element={<PageTransition><AdminPaymentsPage /></PageTransition>} />
         <Route path="/admin/usuarios" element={<PageTransition><AdminUsersPage /></PageTransition>} />
+        <Route path="/admin/usuarios/nuevo" element={<PageTransition><AdminNewUserPage /></PageTransition>} />
         <Route path="/admin/operacion" element={<PageTransition><AdminOperationPage /></PageTransition>} />
         <Route path="/admin/respaldos" element={<PageTransition><BackupsPage /></PageTransition>} />
         <Route path="/admin/datos" element={<PageTransition><AdminDataManagementPage /></PageTransition>} />
