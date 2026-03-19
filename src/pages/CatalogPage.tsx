@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Filter, 
   ChevronLeft, 
@@ -40,6 +40,7 @@ const itemVariants = {
 };
 
 export default function CatalogPage() {
+  const navigate = useNavigate();
   const { addToCart } = useCart();
   const { showToast } = useToast();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -169,7 +170,7 @@ export default function CatalogPage() {
                 <p className="text-slate-500 font-medium">Gestiona la oferta comercial y disponibilidad</p>
               </div>
               <AnimatedButton 
-                onClick={() => setIsAddProductModalOpen(true)}
+                onClick={() => navigate('/admin/productos/nuevo')}
                 className="bg-[#fbbf24] hover:bg-[#f59e0b] text-[#1e3a5f] font-black px-8 py-4 rounded-2xl shadow-xl shadow-yellow-500/20 flex items-center gap-2 transition-all"
               >
                 <Plus className="w-6 h-6 stroke-[3px]" />

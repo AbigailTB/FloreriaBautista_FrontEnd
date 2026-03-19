@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ChevronRight, 
   Info, 
@@ -7,14 +7,59 @@ import {
   Camera, 
   Plus, 
   X,
-  Eye,
   Save,
-  Trash2
 } from 'lucide-react';
+import { DataService, Product } from '../../services/dataService';
+import { useToast } from '../../hooks/useToast';
+import { useNavigate } from 'react-router-dom';
 
 export default function ProductManagementPage() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [product, setProduct] = useState<Partial<Product>>({
+    name: '',
+    description: '',
+    price: 0,
+    sku: '',
+    category: 'Arreglo Floral',
+    status: 'active',
+    image: 'https://images.unsplash.com/photo-1582794543139-8ac9cb4f2025?auto=format&fit=crop&q=80',
+    stock: 0,
+    stock_minimo: 5,
+    createdAt: new Date().toISOString(),
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setProduct(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    if (!product.name || !product.price) {
+      toast({ title: 'Error', description: 'Por favor completa los campos obligatorios.', variant: 'destructive' });
+      return;
+    }
+
+    const products = DataService.getProducts(true);
+    const newProduct: Product = {
+      ...product as Product,
+      id: `PROD-${Date.now()}`,
+      price: Number(product.price),
+      stock: Number(product.stock),
+      stock_minimo: Number(product.stock_minimo),
+    };
+
+    const success = await DataService.saveProducts([...products, newProduct]);
+    if (success) {
+      toast({ title: 'Éxito', description: 'Producto guardado correctamente.' });
+      navigate('/admin/catalog'); // Assuming this is the catalog page
+    } else {
+      toast({ title: 'Error', description: 'No se pudo guardar el producto.', variant: 'destructive' });
+    }
+  };
+
   return (
-    <div className="w-full h-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -26,10 +71,10 @@ export default function ProductManagementPage() {
           <h2 className="text-2xl font-bold text-slate-900">Gestión de Producto</h2>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-6 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">
+          <button onClick={() => navigate(-1)} className="px-6 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">
             Cancelar
           </button>
-          <button className="px-6 py-2 bg-[#1a3b5b] text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-opacity-90 transition-all flex items-center gap-2">
+          <button onClick={handleSave} className="px-6 py-2 bg-[#1a3b5b] text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-opacity-90 transition-all flex items-center gap-2">
             <Save className="w-4 h-4" />
             Guardar Producto
           </button>
@@ -52,6 +97,9 @@ export default function ProductManagementPage() {
                 <label className="block text-sm font-semibold text-slate-700 mb-1 after:content-['*'] after:text-red-500 after:ml-1">Nombre del Producto</label>
                 <input 
                   type="text" 
+                  name="name"
+                  value={product.name}
+                  onChange={handleInputChange}
                   className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
                   placeholder="Ej. Ramo de Rosas Premium" 
                   required 
@@ -60,6 +108,9 @@ export default function ProductManagementPage() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1 after:content-['*'] after:text-red-500 after:ml-1">Descripción</label>
                 <textarea 
+                  name="description"
+                  value={product.description}
+                  onChange={handleInputChange}
                   className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
                   placeholder="Describe las características principales, tipos de flores y cuidados..." 
                   required 
@@ -73,6 +124,9 @@ export default function ProductManagementPage() {
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">$</span>
                     <input 
                       type="number" 
+                      name="price"
+                      value={product.price}
+                      onChange={handleInputChange}
                       className="w-full pl-8 rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
                       placeholder="0.00" 
                       required 
@@ -84,6 +138,9 @@ export default function ProductManagementPage() {
                   <label className="block text-sm font-semibold text-slate-700 mb-1">SKU / Referencia</label>
                   <input 
                     type="text" 
+                    name="sku"
+                    value={product.sku}
+                    onChange={handleInputChange}
                     className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
                     placeholder="FB-ROS-001" 
                   />
@@ -161,12 +218,17 @@ export default function ProductManagementPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Tipo de Producto</label>
-                <select className="w-full rounded-lg border-slate-300 text-sm focus:ring-[#1a3b5b]">
-                  <option>Seleccionar...</option>
-                  <option selected>Arreglo Floral</option>
-                  <option>Planta</option>
-                  <option>Accesorio</option>
-                  <option>Fúnebre</option>
+                <select 
+                  name="category"
+                  value={product.category}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border-slate-300 text-sm focus:ring-[#1a3b5b]"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="Arreglo Floral">Arreglo Floral</option>
+                  <option value="Planta">Planta</option>
+                  <option value="Accesorio">Accesorio</option>
+                  <option value="Fúnebre">Fúnebre</option>
                 </select>
               </div>
               <div>

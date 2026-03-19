@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   ChevronRight, 
   Info, 
@@ -7,14 +7,93 @@ import {
   Camera, 
   Plus, 
   X,
-  Eye,
   Save,
-  Trash2
+  Upload,
 } from 'lucide-react';
+import { DataService, Product } from '../services/dataService';
+import { useToast } from '../hooks/useToast';
+import { useNavigate } from 'react-router-dom';
+import { uploadToCloudinary } from '../services/cloudinaryService';
 
 export default function ProductManagementPage() {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [product, setProduct] = useState<Partial<Product>>({
+    name: '',
+    description: '',
+    price: 0,
+    sku: '',
+    category: 'Arreglo Floral',
+    status: 'active',
+    images: [], // Changed from image to images array
+    stock: 0,
+    stock_minimo: 5,
+    createdAt: new Date().toISOString(),
+  });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setProduct(prev => ({ ...prev, [name]: value }));
+  };
+
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  
+  // ... (inside handleImageUpload)
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      if ((imageFiles.length) >= 3) {
+        showToast('Máximo 3 imágenes permitidas.', 'error');
+        return;
+      }
+      const file = e.target.files[0];
+      setImageFiles(prev => [...prev, file]);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!product.name || !product.price) {
+      showToast('Por favor completa los campos obligatorios.', 'error');
+      return;
+    }
+
+    // Upload images to Cloudinary
+    const imageUrls = await Promise.all(imageFiles.map(file => uploadToCloudinary(file)));
+    
+    const products = DataService.getProducts(true);
+    const newProduct: Product = {
+      ...product as Product,
+      id: `PROD-${Date.now()}`,
+      price: Number(product.price),
+      stock: Number(product.stock),
+      stock_minimo: Number(product.stock_minimo),
+      images: imageUrls, // Store Cloudinary URLs
+    };
+
+    const success = await DataService.saveProducts([...products, newProduct]);
+    if (success) {
+      showToast('Producto guardado correctamente.', 'success');
+      navigate('/admin/catalog');
+    } else {
+      showToast('No se pudo guardar el producto.', 'error');
+    }
+  };
+
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -26,10 +105,10 @@ export default function ProductManagementPage() {
           <h2 className="text-2xl font-bold text-slate-900">Gestión de Producto</h2>
         </div>
         <div className="flex items-center gap-3">
-          <button className="px-6 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">
+          <button onClick={() => navigate(-1)} className="px-6 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">
             Cancelar
           </button>
-          <button className="px-6 py-2 bg-[#1a3b5b] text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-opacity-90 transition-all flex items-center gap-2">
+          <button onClick={handleSave} className="px-6 py-2 bg-[#1a3b5b] text-white rounded-lg text-sm font-semibold shadow-sm hover:bg-opacity-90 transition-all flex items-center gap-2">
             <Save className="w-4 h-4" />
             Guardar Producto
           </button>
@@ -39,8 +118,7 @@ export default function ProductManagementPage() {
       <form className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
         {/* Left Column: Form Fields */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Basic Information */}
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center mb-6">
               <span className="w-8 h-8 rounded-full bg-blue-50 text-[#1a3b5b] flex items-center justify-center mr-3">
                 <Info className="w-4 h-4" />
@@ -52,7 +130,10 @@ export default function ProductManagementPage() {
                 <label className="block text-sm font-semibold text-slate-700 mb-1 after:content-['*'] after:text-red-500 after:ml-1">Nombre del Producto</label>
                 <input 
                   type="text" 
-                  className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
+                  name="name"
+                  value={product.name}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b] border-2" 
                   placeholder="Ej. Ramo de Rosas Premium" 
                   required 
                 />
@@ -60,8 +141,11 @@ export default function ProductManagementPage() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1 after:content-['*'] after:text-red-500 after:ml-1">Descripción</label>
                 <textarea 
-                  className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
-                  placeholder="Describe las características principales, tipos de flores y cuidados..." 
+                  name="description"
+                  value={product.description}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b] border-2" 
+                  placeholder="Describe las características principales..." 
                   required 
                   rows={4}
                 ></textarea>
@@ -73,7 +157,10 @@ export default function ProductManagementPage() {
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500">$</span>
                     <input 
                       type="number" 
-                      className="w-full pl-8 rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
+                      name="price"
+                      value={product.price}
+                      onChange={handleInputChange}
+                      className="w-full pl-8 rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b] border-2" 
                       placeholder="0.00" 
                       required 
                       step="0.01"
@@ -84,16 +171,18 @@ export default function ProductManagementPage() {
                   <label className="block text-sm font-semibold text-slate-700 mb-1">SKU / Referencia</label>
                   <input 
                     type="text" 
-                    className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b]" 
+                    name="sku"
+                    value={product.sku}
+                    onChange={handleInputChange}
+                    className="w-full rounded-lg border-slate-300 focus:border-[#1a3b5b] focus:ring-[#1a3b5b] border-2" 
                     placeholder="FB-ROS-001" 
                   />
                 </div>
               </div>
             </div>
           </section>
-
           {/* Personalization */}
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center space-x-3">
                 <Settings className="w-5 h-5 text-slate-700" />
@@ -113,7 +202,7 @@ export default function ProductManagementPage() {
                 { title: 'Tamaño de arreglo', desc: 'Opciones: Chico, Mediano, Grande, Deluxe.' },
                 { title: 'Mensaje dedicado', desc: 'Incluir tarjeta con mensaje personalizado.' },
               ].map((opt, idx) => (
-                <div key={idx} className="p-4 border border-slate-100 rounded-xl bg-slate-50/50 shadow-sm flex flex-col">
+                <div key={idx} className="p-4 border border-slate-200 rounded-xl bg-slate-50/50 shadow-sm flex flex-col">
                   <div className="flex items-start mb-2">
                     <div className="bg-[#1a3b5b] rounded flex items-center justify-center p-0.5 mr-3">
                       <Check className="w-3 h-3 text-white" />
@@ -132,41 +221,71 @@ export default function ProductManagementPage() {
         {/* Right Column: Sidebar Settings */}
         <div className="space-y-6">
           {/* Image Management */}
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-            <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Imagen Destacada</h3>
-            <div className="relative group cursor-pointer border-2 border-dashed border-slate-300 rounded-xl overflow-hidden hover:border-[#1a3b5b] transition-all">
-              <img 
-                alt="Product Preview" 
-                className="w-full h-64 object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZFYxXGhp49ZAZSn2ccHrQnIXq09O03wnj-MU__6LosKteNxbLWCHCC4i-GC60sf3R7ZaNbkLqybsN6PutqPVR3_nv08IMRQ6rf0UvPxFc7f_HPDdpVkRnVDdwAFKPPKUkVKq1ZPNpTUafZJEuyf_QIbo6XjbGm1qwOSsiPO72gW1cBlKYF04lqsnIqagPK8I9nSSo_WfheW3Lkb32MQNPyt6Mu-dpb147wXSNCj7AQ_G-tBCHAWhXdFCwPi7m0TADtOSFNRaVGenx" 
-              />
-              <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera className="text-white w-8 h-8 mb-2" />
-                <span className="text-white text-xs font-bold">Cambiar Imagen</span>
-              </div>
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Imágenes (Máx 3)</h3>
+            
+            {/* Featured Image / Main Upload Area */}
+            <div className="mb-4">
+              {imagePreviews.length > 0 ? (
+                <div className="relative w-full aspect-video rounded-lg overflow-hidden border-2 border-slate-200">
+                  <img src={imagePreviews[0]} alt="Featured" className="w-full h-full object-cover" />
+                  <button onClick={() => removeImage(0)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 shadow-md">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full aspect-video rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 hover:border-[#1a3b5b] hover:text-[#1a3b5b] transition-colors"
+                >
+                  <Camera className="w-8 h-8 mb-2" />
+                  <span className="text-sm font-medium">Subir imagen destacada</span>
+                </button>
+              )}
             </div>
-            <div className="mt-4 flex space-x-2">
-              <div className="w-16 h-16 rounded border border-slate-200 overflow-hidden cursor-pointer hover:ring-2 ring-[#1a3b5b]">
-                <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmEvRyVpEak2OMr6Yas7KLBr34fMklVOjH5scdMPAyNCsHXFSNo4LS8P_k1d9OcXgvlszn2n7xc74P9818McZQaqSZpEpzpB_2rBvs9p6mPM4Hl_iUSINRRULY0CQgQR2XS-rBXio9OS4EdentTXR4IrqGWc18apEGifhi6D3FHMBT_6MVlR8wcV_hjlEKdyJ0q6KQzdmWryZ-T6JKf91j-Oe2kO06BU6nQA8WivvQ3Uw34x9ixu4Dsjr-dEU8syCPl0Lcin3fMT1o" />
-              </div>
-              <div className="w-16 h-16 rounded border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-50 text-slate-400">
-                <Plus className="w-5 h-5" />
-              </div>
+
+            {/* Thumbnails */}
+            <div className="grid grid-cols-3 gap-2">
+              {[1, 2].map((idx) => (
+                imagePreviews[idx] ? (
+                  <div key={idx} className="relative w-full aspect-square rounded-lg overflow-hidden border-2 border-slate-200">
+                    <img src={imagePreviews[idx]} alt={`Thumbnail ${idx}`} className="w-full h-full object-cover" />
+                    <button onClick={() => removeImage(idx)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-sm">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    key={idx}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={imagePreviews.length < idx}
+                    className={`w-full aspect-square rounded-lg border-2 border-dashed flex items-center justify-center ${imagePreviews.length >= idx ? 'border-slate-300 text-slate-400 hover:border-[#1a3b5b] hover:text-[#1a3b5b]' : 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'}`}
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                )
+              ))}
             </div>
+            <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
           </section>
 
           {/* Classification */}
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Clasificación</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-500 mb-1 uppercase">Tipo de Producto</label>
-                <select className="w-full rounded-lg border-slate-300 text-sm focus:ring-[#1a3b5b]">
-                  <option>Seleccionar...</option>
-                  <option selected>Arreglo Floral</option>
-                  <option>Planta</option>
-                  <option>Accesorio</option>
-                  <option>Fúnebre</option>
+                <select 
+                  name="category"
+                  value={product.category}
+                  onChange={handleInputChange}
+                  className="w-full rounded-lg border-slate-300 text-sm focus:ring-[#1a3b5b] border-2"
+                >
+                  <option value="">Seleccionar...</option>
+                  <option value="Arreglo Floral">Arreglo Floral</option>
+                  <option value="Planta">Planta</option>
+                  <option value="Accesorio">Accesorio</option>
+                  <option value="Fúnebre">Fúnebre</option>
                 </select>
               </div>
               <div>
@@ -194,7 +313,7 @@ export default function ProductManagementPage() {
           </section>
 
           {/* Status Card */}
-          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+          <section className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h3 className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-wider">Estado de Visibilidad</h3>
             <div className="space-y-2">
               {[

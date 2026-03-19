@@ -8,7 +8,7 @@ export interface Product {
   stock: number;
   stock_minimo: number;
   status: 'active' | 'inactive';
-  image: string;
+  images: string[];
   createdAt: string;
   isInventoryOnly?: boolean;
   description?: string;
@@ -118,7 +118,7 @@ export const DataService = {
       stock: Number(p.stock) || 0,
       stock_minimo: Number(p.stock_minimo) || 5,
       status: p.status === 'inactive' ? 'inactive' : 'active',
-      image: p.image || 'https://images.unsplash.com/photo-1582794543139-8ac9cb4f2025?auto=format&fit=crop&q=80',
+      images: p.images || (p.image ? [p.image] : ['https://images.unsplash.com/photo-1582794543139-8ac9cb4f2025?auto=format&fit=crop&q=80']),
       createdAt: p.createdAt || new Date().toISOString(),
       isInventoryOnly: !!p.isInventoryOnly,
       description: p.description || '',

@@ -103,7 +103,7 @@ export default function AdminInventoryPage() {
         stock: newItem.stock || 0,
         stock_minimo: newItem.stock_minimo || 5,
         status: newItem.status as any || 'Activo',
-        image: newItem.image || 'https://images.unsplash.com/photo-1584483766114-2cea6facdf57?auto=format&fit=crop&q=80&w=200',
+        images: newItem.images || (newItem.image ? [newItem.image] : ['https://images.unsplash.com/photo-1584483766114-2cea6facdf57?auto=format&fit=crop&q=80&w=200']),
         description: newItem.description || '',
         isInventoryOnly: true,
         createdAt: new Date().toISOString()
