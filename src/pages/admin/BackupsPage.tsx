@@ -5,7 +5,6 @@ import {
   CloudUpload,
   AlertTriangle,
   RefreshCw,
-  Download,
   Plus,
   Table,
   CheckCircle2,
@@ -14,6 +13,14 @@ import {
   HardDrive,
   Zap,
   Calendar,
+  Filter,
+  X,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  ToggleLeft,
+  ToggleRight,
+  RotateCcw,
 } from 'lucide-react';
 import { AdminService } from '../../services/adminService';
 import { Backup } from '../../types';
@@ -36,6 +43,24 @@ export default function BackupsPage() {
   const [hora, setHora] = useState('02:00');
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [resultConfig, setResultConfig] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const [filterFechaDesde, setFilterFechaDesde] = useState('');
+  const [filterFechaHasta, setFilterFechaHasta] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [sortBy, setSortBy] = useState<'fecha' | 'tamano'>('fecha');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  // Auto-backup config
+  const [autoEnabled, setAutoEnabled] = useState(false);
+  const [autoFrecuencia, setAutoFrecuencia] = useState('CADA_DIA');
+  const [loadingAutoConfig, setLoadingAutoConfig] = useState(false);
+  const [resultAutoConfig, setResultAutoConfig] = useState<{ ok: boolean; msg: string; nextRun?: string } | null>(null);
+
+  // Restore modal
+  const [restoreBackup, setRestoreBackup] = useState<Backup | null>(null);
+  const [loadingRestore, setLoadingRestore] = useState(false);
+  const [resultRestore, setResultRestore] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const loadBackups = async () => {
     setLoading(true);
@@ -92,12 +117,78 @@ export default function BackupsPage() {
     } finally { setLoadingConfig(false); }
   };
 
+  const handleSaveAutoConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoadingAutoConfig(true);
+    setResultAutoConfig(null);
+    try {
+      const res = await AdminService.saveBackupConfig(autoFrecuencia, '');
+      // Calculate estimated next run
+      const nextMap: Record<string, string> = {
+        CADA_HORA: '1 hora',
+        CADA_6_HORAS: '6 horas',
+        CADA_DIA: '24 horas',
+      };
+      setResultAutoConfig({
+        ok: res.success,
+        msg: res.message || 'Configuración automática guardada.',
+        nextRun: autoEnabled ? `Próxima ejecución estimada: en ${nextMap[autoFrecuencia] ?? '?'}` : undefined,
+      });
+    } catch (err: any) {
+      setResultAutoConfig({ ok: false, msg: err.message });
+    } finally { setLoadingAutoConfig(false); }
+  };
+
+  const handleRestore = async () => {
+    if (!restoreBackup) return;
+    setLoadingRestore(true);
+    setResultRestore(null);
+    try {
+      const res = await AdminService.restoreBackup(restoreBackup.id);
+      setResultRestore({ ok: res.success, msg: res.message || 'Restauración iniciada.' });
+      if (res.success) { setTimeout(() => { setRestoreBackup(null); setResultRestore(null); loadBackups(); }, 3000); }
+    } catch (err: any) {
+      setResultRestore({ ok: false, msg: err.message });
+    } finally { setLoadingRestore(false); }
+  };
+
   useEffect(() => { loadBackups(); }, []);
 
   const formatSize = (bytes: number) => {
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
     return `${(bytes / 1024).toFixed(2)} KB`;
   };
+
+  const getBackupType = (nombre: string) => {
+    const n = nombre.toLowerCase();
+    if (n.includes('completo') || n.includes('full')) return { label: 'Solo BD', color: 'bg-blue-50 text-blue-700 border-blue-100' };
+    if (n.includes('estatico') || n.includes('archivo') || n.includes('static')) return { label: 'BD + Archivos', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+    return { label: 'Respaldo', color: 'bg-slate-50 text-slate-600 border-slate-200' };
+  };
+
+  const getBackupStatus = (_backup: Backup) => {
+    // Since API only returns completed backups in Drive, we treat all as Completado
+    return { label: 'Completado', color: 'bg-emerald-50 text-emerald-700' };
+  };
+
+  const activeFilters = [filterFechaDesde, filterFechaHasta, filterTipo, filterEstado].filter(Boolean).length;
+
+  const filteredBackups = backups
+    .filter(b => {
+      const date = new Date(b.creadoEn);
+      if (filterFechaDesde && date < new Date(filterFechaDesde)) return false;
+      if (filterFechaHasta && date > new Date(filterFechaHasta + 'T23:59:59')) return false;
+      if (filterTipo) {
+        const tipo = getBackupType(b.nombre).label;
+        if (tipo !== filterTipo) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const mul = sortDir === 'asc' ? 1 : -1;
+      if (sortBy === 'fecha') return mul * (new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime());
+      return mul * (a.tamanoBytes - b.tamanoBytes);
+    });
 
   const inputClass =
     'w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-amber-400/60 focus:border-amber-400 bg-white text-slate-800 placeholder-slate-400 transition-all';
@@ -293,121 +384,281 @@ export default function BackupsPage() {
               </button>
             </form>
           </div>
+
+          {/* Respaldo Automático */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white">
+              <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <RotateCcw className="w-3.5 h-3.5 text-indigo-700" />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">Respaldo Automático</h3>
+            </div>
+            <form onSubmit={handleSaveAutoConfig} className="p-5 space-y-4">
+              {/* Toggle habilitar */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-700">Habilitar respaldo automático</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Se ejecutará según la frecuencia configurada</p>
+                </div>
+                <button type="button" onClick={() => setAutoEnabled(v => !v)} className="shrink-0">
+                  {autoEnabled
+                    ? <ToggleRight className="w-9 h-9 text-indigo-600" />
+                    : <ToggleLeft className="w-9 h-9 text-slate-300" />
+                  }
+                </button>
+              </div>
+              {/* Frecuencia */}
+              {autoEnabled && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Frecuencia</label>
+                  <div className="relative">
+                    <select
+                      value={autoFrecuencia}
+                      onChange={e => setAutoFrecuencia(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:border-indigo-400 bg-white text-slate-800 appearance-none cursor-pointer"
+                    >
+                      <option value="CADA_HORA">Cada hora</option>
+                      <option value="CADA_6_HORAS">Cada 6 horas</option>
+                      <option value="CADA_DIA">Una vez al día</option>
+                    </select>
+                    <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 rotate-90 pointer-events-none" />
+                  </div>
+                </div>
+              )}
+              {resultAutoConfig && (
+                <div className={`flex flex-col gap-1 p-3 rounded-xl text-xs font-medium ${resultAutoConfig.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                  <div className="flex items-start gap-2">
+                    {resultAutoConfig.ok ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" /> : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+                    {resultAutoConfig.msg}
+                  </div>
+                  {resultAutoConfig.nextRun && <p className="text-emerald-600 font-bold pl-5">{resultAutoConfig.nextRun}</p>}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={loadingAutoConfig}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[.98] disabled:opacity-50 text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm shadow-indigo-200"
+              >
+                {loadingAutoConfig ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                {loadingAutoConfig ? 'Guardando...' : 'Guardar configuración'}
+              </button>
+            </form>
+          </div>
         </div>
 
         {/* ── Right column: table ─── (3/5) */}
         <div className="xl:col-span-3">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full flex flex-col">
 
             {/* Table header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Historial de respaldos</h3>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  Historial de respaldos
+                  {activeFilters > 0 && (
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full border border-blue-100">
+                      {activeFilters} filtro{activeFilters > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </h3>
                 <p className="text-xs text-slate-400 mt-0.5">Almacenados en Google Drive</p>
               </div>
-              <button
-                onClick={loadBackups}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 px-3 py-1.5 rounded-lg transition-all"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Actualizar
-              </button>
+              <div className="flex items-center gap-2">
+                {activeFilters > 0 && (
+                  <button
+                    onClick={() => { setFilterFechaDesde(''); setFilterFechaHasta(''); setFilterTipo(''); setFilterEstado(''); }}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-100 px-3 py-1.5 rounded-lg transition-all"
+                  >
+                    <X className="w-3.5 h-3.5" />Limpiar filtros
+                  </button>
+                )}
+                <button
+                  onClick={loadBackups}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 px-3 py-1.5 rounded-lg transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  Actualizar
+                </button>
+              </div>
+            </div>
+
+            {/* Filter bar */}
+            <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-slate-100 bg-slate-50/40">
+              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Desde</label>
+                <input type="date" value={filterFechaDesde} onChange={e => setFilterFechaDesde(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 outline-none" />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hasta</label>
+                <input type="date" value={filterFechaHasta} onChange={e => setFilterFechaHasta(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 outline-none" />
+              </div>
+              <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)}
+                className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 outline-none cursor-pointer">
+                <option value="">Todos los tipos</option>
+                <option value="Solo BD">Solo BD</option>
+                <option value="BD + Archivos">BD + Archivos</option>
+                <option value="Respaldo">Otros</option>
+              </select>
+              <div className="ml-auto flex items-center gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ordenar</label>
+                <button onClick={() => setSortBy('fecha')} className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1 ${sortBy === 'fecha' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'}`}>
+                  Fecha
+                  {sortBy === 'fecha' ? (sortDir === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3" />}
+                </button>
+                <button onClick={() => setSortBy('tamano')} className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all flex items-center gap-1 ${sortBy === 'tamano' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700'}`}>
+                  Tamaño
+                  {sortBy === 'tamano' ? (sortDir === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3" />}
+                </button>
+                <button onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')} className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-all">
+                  {sortDir === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             {/* Table content */}
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
-                <RefreshCw className="w-7 h-7 animate-spin" />
-                <p className="text-sm">Cargando respaldos...</p>
-              </div>
-            ) : error ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-400">
-                <AlertTriangle className="w-7 h-7" />
-                <p className="text-sm font-medium">{error}</p>
-              </div>
-            ) : backups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-300">
-                <Database className="w-10 h-10" />
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-slate-400">Sin respaldos</p>
-                  <p className="text-xs text-slate-300 mt-1">Crea tu primer respaldo usando los formularios</p>
+            <div className="flex-1 overflow-auto">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+                  <RefreshCw className="w-7 h-7 animate-spin" />
+                  <p className="text-sm">Cargando respaldos...</p>
                 </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-slate-100">
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tamaño</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Creado</th>
-                      <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {backups.map((backup, i) => (
-                      <tr
-                        key={backup.id}
-                        className="group hover:bg-slate-50/70 transition-colors"
-                        style={{ animationDelay: `${i * 40}ms` }}
-                      >
-                        <td className="px-6 py-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
-                              <Database className="w-3.5 h-3.5 text-amber-500" />
-                            </div>
-                            <span className="text-sm font-semibold text-slate-800 truncate max-w-[180px]" title={backup.nombre}>
-                              {backup.nombre}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-3.5">
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
-                            <HardDrive className="w-3 h-3" />
-                            {formatSize(backup.tamanoBytes)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-3.5">
-                          <span className="text-sm text-slate-500">
-                            {new Date(backup.creadoEn).toLocaleString('es-MX', {
-                              dateStyle: 'short',
-                              timeStyle: 'short',
-                            })}
-                          </span>
-                        </td>
-                        <td className="px-6 py-3.5 text-right">
-                          <a
-                            href={backup.enlace}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-100 hover:border-blue-200 px-3 py-1.5 rounded-lg transition-all"
-                          >
-                            <Download className="w-3 h-3" />
-                            Descargar
-                          </a>
-                        </td>
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-red-400">
+                  <AlertTriangle className="w-7 h-7" />
+                  <p className="text-sm font-medium">{error}</p>
+                </div>
+              ) : filteredBackups.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-300">
+                  <Database className="w-10 h-10" />
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-slate-400">{backups.length === 0 ? 'Sin respaldos' : 'Sin resultados'}</p>
+                    <p className="text-xs text-slate-300 mt-1">{backups.length === 0 ? 'Crea tu primer respaldo usando los formularios' : 'Intenta cambiar los filtros activos'}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nombre</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tipo</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tamaño</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Creado</th>
+                        <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Acción</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {filteredBackups.map((backup, i) => {
+                        const tipo = getBackupType(backup.nombre);
+                        const status = getBackupStatus(backup);
+                        return (
+                          <tr key={backup.id} className="group hover:bg-slate-50/70 transition-colors" style={{ animationDelay: `${i * 40}ms` }}>
+                            <td className="px-6 py-3.5">
+                              <div className="flex items-center gap-2.5">
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${tipo.color}`}>
+                                  <Database className="w-3.5 h-3.5" />
+                                </div>
+                                <span className="text-sm font-semibold text-slate-800 truncate max-w-[160px]" title={backup.nombre}>{backup.nombre}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3.5">
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold border ${tipo.color}`}>{tipo.label}</span>
+                            </td>
+                            <td className="px-6 py-3.5">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${status.color}`}>
+                                <CheckCircle2 className="w-3 h-3" />{status.label}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3.5">
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                                <HardDrive className="w-3 h-3" />{formatSize(backup.tamanoBytes)}
+                              </span>
+                            </td>
+                            <td className="px-6 py-3.5">
+                              <span className="text-sm text-slate-500">{new Date(backup.creadoEn).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                            </td>
+                            <td className="px-6 py-3.5 text-right">
+                              <button
+                                onClick={() => { setRestoreBackup(backup); setResultRestore(null); }}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-100 hover:border-amber-200 px-3 py-1.5 rounded-lg transition-all"
+                              >
+                                <RotateCcw className="w-3 h-3" />
+                                Restaurar BD
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
 
             {/* Table footer */}
             {!loading && !error && backups.length > 0 && (
               <div className="px-6 py-3 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-xs text-slate-400">
-                  {backups.length} respaldo{backups.length !== 1 ? 's' : ''} registrado{backups.length !== 1 ? 's' : ''}
+                  {filteredBackups.length} de {backups.length} respaldo{backups.length !== 1 ? 's' : ''}
+                  {activeFilters > 0 && ' (filtrados)'}
                 </span>
                 <span className="text-xs text-slate-400 flex items-center gap-1">
-                  <CloudUpload className="w-3 h-3" />
-                  Sincronizado con Drive
+                  <CloudUpload className="w-3 h-3" />Sincronizado con Drive
                 </span>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* ── Restore confirmation modal ── */}
+      {restoreBackup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-amber-100 max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 mb-1">¿Restaurar base de datos?</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Esta acción restaurará la base de datos al estado del respaldo <strong className="text-slate-700">"{restoreBackup.nombre}"</strong>.
+                  Esto puede sobrescribir información reciente. ¿Deseas continuar?
+                </p>
+              </div>
+            </div>
+            {resultRestore && (
+              <div className={`mb-4 flex items-start gap-2 p-3 rounded-xl text-xs font-medium ${resultRestore.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                {resultRestore.ok ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" /> : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+                {resultRestore.msg}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setRestoreBackup(null); setResultRestore(null); }}
+                disabled={loadingRestore}
+                className="flex-1 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRestore}
+                disabled={loadingRestore || resultRestore?.ok === true}
+                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm shadow-amber-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loadingRestore
+                  ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" />Restaurando...</>
+                  : <><RotateCcw className="w-3.5 h-3.5" />Confirmar restauración</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

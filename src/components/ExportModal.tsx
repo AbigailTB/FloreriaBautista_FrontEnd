@@ -26,16 +26,18 @@ export default function ExportModal({ isOpen, onClose, data, title, filename = '
     if (format === 'csv') {
       const worksheet = XLSX.utils.json_to_sheet(data);
       const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
-      
-      const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
+
+      // BOM (\uFEFF) para que Excel detecte UTF-8 y muestre tildes y ñ correctamente
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csvOutput], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
+      const link = document.createElement('a');
+      link.href = url;
       link.setAttribute('download', `${filename}.csv`);
-      link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      link.remove();
+      URL.revokeObjectURL(url);
     } else if (format === 'pdf') {
       const doc = new jsPDF();
       

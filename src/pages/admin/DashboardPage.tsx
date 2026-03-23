@@ -5,23 +5,36 @@ import {
   TrendingUp, ShoppingCart, CreditCard, UserPlus, AlertTriangle,
   MoreVertical, ChevronRight, Download, Briefcase, UserCircle,
   User, Package, MapPin, ArrowRight, Heart, Clock, CheckCircle2,
-  Bell, BarChart2, Boxes
+  Bell, BarChart2, Boxes, Maximize2, Minimize2
 } from 'lucide-react';
 import { DataService } from '../../services/dataService';
+import { AdminService } from '../../services/adminService';
+import { Order } from '../../types';
 import { FadeIn, ScaleIn, StaggerContainer, AnimatedButton, GlassCard } from '../../components/Animations';
 
 // ─── Status helpers ────────────────────────────────────────────────────────────
 const statusLabel: Record<string, string> = {
-  pending: 'Pendiente', shipped: 'Enviado', delivered: 'Entregado', cancelled: 'Cancelado'
+  pending:    'Pendiente', pendiente:  'Pendiente',
+  shipped:    'Enviado',   enviado:    'Enviado',   procesando: 'Procesando',
+  delivered:  'Entregado', entregado:  'Entregado',
+  cancelled:  'Cancelado', cancelado:  'Cancelado',
 };
 const statusStyle: Record<string, string> = {
-  pending:   'bg-amber-50  text-amber-600  border border-amber-100',
-  shipped:   'bg-blue-50   text-blue-600   border border-blue-100',
-  delivered: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-  cancelled: 'bg-slate-100 text-slate-400  border border-slate-200',
+  pending:    'bg-amber-50   text-amber-600   border border-amber-100',
+  pendiente:  'bg-amber-50   text-amber-600   border border-amber-100',
+  shipped:    'bg-blue-50    text-blue-600    border border-blue-100',
+  enviado:    'bg-blue-50    text-blue-600    border border-blue-100',
+  procesando: 'bg-blue-50    text-blue-600    border border-blue-100',
+  delivered:  'bg-emerald-50 text-emerald-600 border border-emerald-100',
+  entregado:  'bg-emerald-50 text-emerald-600 border border-emerald-100',
+  cancelled:  'bg-slate-100  text-slate-400   border border-slate-200',
+  cancelado:  'bg-slate-100  text-slate-400   border border-slate-200',
 };
 const statusDot: Record<string, string> = {
-  pending: 'bg-amber-400', shipped: 'bg-blue-500', delivered: 'bg-emerald-500', cancelled: 'bg-slate-300'
+  pending:    'bg-amber-400', pendiente:  'bg-amber-400',
+  shipped:    'bg-blue-500',  enviado:    'bg-blue-500',  procesando: 'bg-blue-500',
+  delivered:  'bg-emerald-500', entregado: 'bg-emerald-500',
+  cancelled:  'bg-slate-300', cancelado:  'bg-slate-300',
 };
 
 export default function DashboardPage() {
@@ -29,22 +42,37 @@ export default function DashboardPage() {
   const [stats]                       = useState(DataService.getDashboardStats());
   const [alerts]                      = useState(DataService.getInventoryAlerts());
   const [weeklySales]                 = useState(DataService.getWeeklySalesData());
-  const [recentOrders, setRecentOrders] = useState(DataService.getOrders().slice(0, 5));
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'pending' | 'shipped'>('all');
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const pageSize   = 3;
   const totalPages = Math.ceil(alerts.length / pageSize);
   const displayedAlerts = alerts.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
-  const filteredOrders = recentOrders.filter(o =>
-    orderFilter === 'all' ? true : o.status === orderFilter
-  );
+  const filteredOrders = recentOrders.filter(o => {
+    if (orderFilter === 'all') return true;
+    const s = o.estadoPedido?.toLowerCase();
+    if (orderFilter === 'pending') return s === 'pendiente' || s === 'pending';
+    if (orderFilter === 'shipped') return s === 'enviado'   || s === 'shipped' || s === 'procesando';
+    return false;
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem('usuario');
     if (stored) setUser(JSON.parse(stored));
+  }, []);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const res = await AdminService.getAdminOrders({ size: 5 });
+        setRecentOrders(res.data.items);
+      } catch { /* mantiene lista vacía */ }
+    };
+    loadOrders();
   }, []);
 
   const handleExportReport = () => {
@@ -55,9 +83,11 @@ export default function DashboardPage() {
     document.body.appendChild(a); a.click(); a.remove();
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, status: 'pending' | 'shipped' | 'delivered' | 'cancelled') => {
-    await DataService.updateOrderStatus(orderId, status);
-    setRecentOrders(DataService.getOrders().slice(0, 5));
+  const handleUpdateOrderStatus = async (_orderId: string, _status: string) => {
+    try {
+      const res = await AdminService.getAdminOrders({ size: 5 });
+      setRecentOrders(res.data.items);
+    } catch { /* ignore */ }
     setOpenActionMenu(null);
   };
 
@@ -70,7 +100,7 @@ export default function DashboardPage() {
   // ── ADMIN DASHBOARD ──────────────────────────────────────────────────────────
   if (user.role === 'admin' || user.role === 'administrador') {
     return (
-      <div className="w-full space-y-8">
+      <div className={fullscreen ? "fixed inset-0 z-50 bg-white overflow-auto p-8 space-y-8" : "w-full space-y-8"}>
 
         {/* Header */}
         <FadeIn>
@@ -84,6 +114,14 @@ export default function DashboardPage() {
               <p className="text-slate-400 text-sm mt-0.5">Rendimiento de tu florería</p>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setFullscreen((f: boolean) => !f)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:border-slate-300 hover:shadow-sm transition-all"
+                title={fullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              >
+                {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {fullscreen ? 'Salir' : 'Pantalla completa'}
+              </button>
               <button onClick={handleExportReport}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:border-slate-300 hover:shadow-sm transition-all">
                 <Download className="w-4 h-4" />
@@ -264,7 +302,7 @@ export default function DashboardPage() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-100">
-                    {['ID Pedido', 'Monto', 'Estado', 'Método Pago', 'Fecha', ''].map((h, i) => (
+                    {['ID Pedido', 'Monto', 'Estado', 'Cliente', 'Fecha', ''].map((h, i) => (
                       <th key={i} className={`px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${i === 5 ? 'text-right' : ''}`}>{h}</th>
                     ))}
                   </tr>
@@ -279,21 +317,21 @@ export default function DashboardPage() {
                         <span className="text-sm font-black text-slate-900">${order.total}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold ${statusStyle[order.status] || ''}`}>
-                          <span className={`size-1.5 rounded-full ${statusDot[order.status] || ''}`} />
-                          {statusLabel[order.status] || order.status}
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold ${statusStyle[order.estadoPedido] || ''}`}>
+                          <span className={`size-1.5 rounded-full ${statusDot[order.estadoPedido] || ''}`} />
+                          {statusLabel[order.estadoPedido] || order.estadoPedido}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 text-slate-500">
-                          <CreditCard className="w-3.5 h-3.5" />
-                          <span className="text-xs font-medium capitalize">{order.paymentMethod}</span>
+                          <UserCircle className="w-3.5 h-3.5" />
+                          <span className="text-xs font-medium">{order.nombreCliente}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 text-slate-400">
                           <Clock className="w-3.5 h-3.5" />
-                          <span className="text-xs">{new Date(order.createdAt).toLocaleDateString()}</span>
+                          <span className="text-xs">{new Date(order.fechaCreacion).toLocaleDateString()}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right relative">

@@ -202,7 +202,7 @@ export default function AdminPaymentsPage() {
               </span>
             </div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">
-              Gestión d1234e Pagos
+              Gestión Pagos
             </h1>
             <p className="text-slate-400 text-sm mt-0.5">
               Monitorea transacciones, reembolsos y estados de facturación
@@ -297,7 +297,7 @@ export default function AdminPaymentsPage() {
           <span className="ml-auto text-xs font-medium text-slate-400">
             {filtered.length}{" "}
             <span className="text-slate-300">/ {payments.length}</span>{" "}
-            regqwerqweristros
+            registros
           </span>
         </div>
       </FadeIn>

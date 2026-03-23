@@ -20,6 +20,8 @@ import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
 import AdminDataManagementPage from '../pages/admin/AdminDataManagementPage';
 import AdminSystemMonitoringPage from '../pages/admin/AdminSystemMonitoringPage';
 import AdminAuditPage from '../pages/admin/AdminAuditPage';
+import AdminFlowersPage from '../pages/admin/AdminFlowersPage';
+import AdminProductDetailPage from '../pages/admin/AdminProductDetailPage';
 
 // ── Employee ──────────────────────────────────────
 import ProductManagementPage from '../pages/employee/ProductManagementPage';
@@ -87,6 +89,8 @@ export default function AnimatedRoutes() {
         <Route path="/admin/datos" element={<PageTransition><AdminDataManagementPage /></PageTransition>} />
         <Route path="/admin/monitoreo" element={<PageTransition><AdminSystemMonitoringPage /></PageTransition>} />
         <Route path="/admin/auditoria" element={<PageTransition><AdminAuditPage /></PageTransition>} />
+        <Route path="/admin/flores" element={<PageTransition><AdminFlowersPage /></PageTransition>} />
+        <Route path="/admin/productos/:id" element={<PageTransition><AdminProductDetailPage /></PageTransition>} />
 
         {/* ── Employee ────────────────────────────── */}
         <Route path="/admin/productos/nuevo" element={<PageTransition><ProductManagementPage /></PageTransition>} />

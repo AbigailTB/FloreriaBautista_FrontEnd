@@ -16,7 +16,8 @@ import {
   Boxes
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { DataService, Product } from '../../services/dataService';
+import { AdminService } from '../../services/adminService';
+import { Product, ProductBody, ImportProductsResult } from '../../types';
 import { FadeIn, ScaleIn, StaggerContainer, AnimatedButton, GlassCard } from '../../components/Animations';
 import ImportModal from '../../components/ImportModal';
 import ExportModal from '../../components/ExportModal';
@@ -30,22 +31,35 @@ export default function AdminInventoryPage() {
   const [loading, setLoading] = useState(true);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [importResult, setImportResult] = useState<ImportProductsResult | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const { showToast } = useToast();
 
-  const [newItem, setNewItem] = useState<Partial<Product>>({
-    name: '', category: 'Insumos', price: 0, stock: 0,
-    stock_minimo: 5, status: 'Activo', image: '', description: '', isInventoryOnly: true
+  const [newItem, setNewItem] = useState<Partial<ProductBody>>({
+    nombre: '', tipo: 'Insumos', precioBase: 0, descripcion: '',
+    esPersonalizable: false, estado: 'activo', imagenUrl: '',
+    categorias: [], colecciones: [],
   });
 
+  const loadInventory = async () => {
+    try {
+      const res = await AdminService.getAdminProducts({ size: 100 });
+      const items = res.data.items;
+      setInventory(items);
+      const totalValue = items.reduce((sum, p) => sum + p.precioBase * (p.stock ?? 0), 0);
+      const criticalItems = items.filter(p => (p.stock ?? 0) <= 5).length;
+      setStats({ totalValue, criticalItems, entriesMonth: 0, exitsMonth: 0 });
+    } catch {
+      showToast('Error al cargar inventario', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const items = DataService.getInventoryItems();
-    const inventoryStats = DataService.getInventoryStats();
-    setInventory(items);
-    setStats(inventoryStats);
-    setLoading(false);
+    loadInventory();
   }, []);
 
   useEffect(() => {
@@ -58,57 +72,66 @@ export default function AdminInventoryPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [activeDropdown]);
 
-  const handleImportConfirm = async (data: any[]) => {
-    setLoading(true);
+  const handleImportConfirm = async (_data: any[], file: File) => {
     try {
-      await DataService.importProducts(data.map(item => ({ ...item, isInventoryOnly: item.isInventoryOnly !== undefined ? item.isInventoryOnly : true })));
-      setInventory(DataService.getInventoryItems());
-      setStats(DataService.getInventoryStats());
-      showToast(`Se importaron ${data.length} registros exitosamente.`, 'success');
-    } catch { showToast("Hubo un error al importar los datos.", 'error'); }
-    finally { setLoading(false); setIsImportModalOpen(false); }
+      const result = await AdminService.importAdminProducts(file);
+      setImportResult(result.data);
+      const res = await AdminService.getAdminProducts({ size: 100 });
+      const newItems = res.data.items;
+      setInventory(newItems);
+      const totalValue = newItems.reduce((sum, p) => sum + p.precioBase * (p.stock ?? 0), 0);
+      const criticalItems = newItems.filter(p => (p.stock ?? 0) <= 5).length;
+      setStats({ totalValue, criticalItems, entriesMonth: 0, exitsMonth: 0 });
+      showToast(`${result.message}`, 'success');
+    } catch (err: any) {
+      showToast(`Error al importar: ${err.message ?? 'desconocido'}`, 'error');
+    } finally {
+      setIsImportModalOpen(false);
+    }
   };
 
   const handleAddItem = async () => {
-    if (!newItem.name || newItem.price === undefined) { showToast('Completa los campos obligatorios.', 'error'); return; }
+    if (!newItem.nombre || newItem.precioBase === undefined) {
+      showToast('Completa los campos obligatorios.', 'error');
+      return;
+    }
     try {
-      const productToAdd: Product = {
-        id: `inv-${Date.now()}`, sku: `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-        name: newItem.name!, category: newItem.category || 'Insumos', price: newItem.price!,
-        stock: newItem.stock || 0, stock_minimo: newItem.stock_minimo || 5, status: (newItem.status as any) || 'Activo',
-        images: newItem.image ? [newItem.image] : ['https://images.unsplash.com/photo-1584483766114-2cea6facdf57?auto=format&fit=crop&q=80&w=200'],
-        description: newItem.description || '', isInventoryOnly: true, createdAt: new Date().toISOString()
-      };
-      await DataService.saveProducts([productToAdd, ...DataService.getProducts(true)]);
-      setInventory(DataService.getInventoryItems());
-      setStats(DataService.getInventoryStats());
+      await AdminService.createAdminProduct(newItem as ProductBody);
+      await loadInventory();
       showToast('Insumo añadido exitosamente', 'success');
       setIsAddModalOpen(false);
-      setNewItem({ name: '', category: 'Insumos', price: 0, stock: 0, stock_minimo: 5, status: 'Activo', image: '', description: '', isInventoryOnly: true });
-    } catch { showToast('Error al añadir insumo', 'error'); }
+      setNewItem({ nombre: '', tipo: 'Insumos', precioBase: 0, descripcion: '', esPersonalizable: false, estado: 'activo', imagenUrl: '', categorias: [], colecciones: [] });
+    } catch {
+      showToast('Error al añadir insumo', 'error');
+    }
   };
 
-  const handleSync = () => {
+  const handleSync = async () => {
     setLoading(true);
-    setTimeout(() => { setLoading(false); showToast('Inventario sincronizado correctamente', 'success'); }, 800);
+    await loadInventory();
+    showToast('Inventario sincronizado correctamente', 'success');
   };
 
-  const handleAction = (action: string, itemId: string) => {
+  const handleAction = (action: string, _itemId: string) => {
     setActiveDropdown(null);
     showToast(`Acción "${action}" ejecutada`, 'success');
   };
 
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'Todas' || item.category === categoryFilter;
+  const filteredInventory = inventory.filter((item: Product) => {
+    const matchesSearch =
+      item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'Todas' || item.tipo === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
   const getStatusInfo = (item: Product) => {
-    if (item.stock <= 0) return { label: 'Sin Stock', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', dot: 'bg-rose-400', bar: 0 };
-    if (item.stock <= item.stock_minimo) return { label: 'Crítico', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', dot: 'bg-rose-400', bar: 20 };
-    if (item.stock <= item.stock_minimo * 1.5) return { label: 'Bajo', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', dot: 'bg-amber-400', bar: 50 };
-    return { label: 'Óptimo', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', dot: 'bg-emerald-400', bar: 90 };
+    const stock = item.stock ?? 0;
+    const minimo = 5;
+    if (stock <= 0)         return { label: 'Sin Stock', color: 'text-rose-600',    bg: 'bg-rose-50',    border: 'border-rose-100',    dot: 'bg-rose-400',    bar: 0  };
+    if (stock <= minimo)    return { label: 'Crítico',   color: 'text-rose-600',    bg: 'bg-rose-50',    border: 'border-rose-100',    dot: 'bg-rose-400',    bar: 20 };
+    if (stock <= minimo * 1.5) return { label: 'Bajo',   color: 'text-amber-600',   bg: 'bg-amber-50',   border: 'border-amber-100',   dot: 'bg-amber-400',   bar: 50 };
+    return                       { label: 'Óptimo',      color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', dot: 'bg-emerald-400', bar: 90 };
   };
 
   if (loading) return (
@@ -162,10 +185,10 @@ export default function AdminInventoryPage() {
       {/* ── STATS ── */}
       <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Valor Total',     value: `$${(stats?.totalValue || 0).toLocaleString()}`, icon: TrendingUp,     color: 'text-blue-600',    bg: 'bg-blue-50',    border: 'border-blue-100',    sub: 'en inventario' },
-          { label: 'Items Críticos',  value: stats.criticalItems.toString(),                  icon: AlertTriangle,  color: 'text-rose-600',    bg: 'bg-rose-50',    border: 'border-rose-100',    sub: 'requieren atención' },
-          { label: 'Entradas (Mes)',  value: `+${stats.entriesMonth}`,                        icon: ArrowUpRight,   color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', sub: 'unidades ingresadas' },
-          { label: 'Salidas (Mes)',   value: `-${stats.exitsMonth}`,                          icon: ArrowDownRight, color: 'text-amber-600',   bg: 'bg-amber-50',   border: 'border-amber-100',   sub: 'unidades despachadas' },
+          { label: 'Valor Total',    value: `$${(stats?.totalValue || 0).toLocaleString()}`, icon: TrendingUp,     color: 'text-blue-600',    bg: 'bg-blue-50',    border: 'border-blue-100',    sub: 'en inventario' },
+          { label: 'Items Críticos', value: stats.criticalItems.toString(),                  icon: AlertTriangle,  color: 'text-rose-600',    bg: 'bg-rose-50',    border: 'border-rose-100',    sub: 'requieren atención' },
+          { label: 'Entradas (Mes)', value: `+${stats.entriesMonth}`,                        icon: ArrowUpRight,   color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', sub: 'unidades ingresadas' },
+          { label: 'Salidas (Mes)',  value: `-${stats.exitsMonth}`,                          icon: ArrowDownRight, color: 'text-amber-600',   bg: 'bg-amber-50',   border: 'border-amber-100',   sub: 'unidades despachadas' },
         ].map((s, i) => (
           <motion.div key={i}
             initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
@@ -187,7 +210,7 @@ export default function AdminInventoryPage() {
         <div className="flex flex-wrap items-center gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
           <div className="flex-1 min-w-[220px] relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="Buscar por nombre o SKU..."
+            <input type="text" placeholder="Buscar por nombre o ID..."
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
               value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
@@ -195,7 +218,7 @@ export default function AdminInventoryPage() {
             className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all"
             value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
             <option value="Todas">Todas las categorías</option>
-            {['Flores de Corte','Insumos','Accesorios','Ramos','Plantas'].map(c => <option key={c}>{c}</option>)}
+            {['Flores de Corte', 'Insumos', 'Accesorios', 'Ramos', 'Plantas'].map(c => <option key={c}>{c}</option>)}
           </select>
           <button onClick={handleSync}
             className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all">
@@ -208,6 +231,27 @@ export default function AdminInventoryPage() {
         </div>
       </FadeIn>
 
+      {/* ── IMPORT RESULT BANNER ── */}
+      {importResult !== null && (
+        <div className="flex items-center justify-between px-5 py-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-sm gap-4">
+          <div className="flex items-center gap-6">
+            <span className="font-bold text-emerald-800">{importResult.archivo}</span>
+            <span className="text-emerald-700"><span className="font-black">{importResult.totalFilas}</span> filas procesadas</span>
+            <span className="text-emerald-700"><span className="font-black text-emerald-600">+{importResult.insertados}</span> insertados</span>
+            <span className="text-emerald-700"><span className="font-black text-blue-600">{importResult.actualizados}</span> actualizados</span>
+            {importResult.errores > 0 && (
+              <span className="text-rose-700"><span className="font-black">{importResult.errores}</span> errores</span>
+            )}
+          </div>
+          <button
+            onClick={() => setImportResult(null)}
+            className="text-emerald-600 hover:text-emerald-900 font-black text-xs uppercase tracking-widest transition-colors shrink-0"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
+
       {/* ── TABLE ── */}
       <FadeIn delay={0.3}>
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
@@ -215,7 +259,7 @@ export default function AdminInventoryPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-100">
-                  {['Artículo', 'SKU', 'Categoría', 'Stock', 'Nivel', 'Estado', ''].map((h, i) => (
+                  {['Artículo', 'ID', 'Tipo', 'Stock', 'Nivel', 'Estado', ''].map((h, i) => (
                     <th key={i} className={`px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${i === 6 ? 'text-right' : ''}`}>
                       {h}
                     </th>
@@ -236,31 +280,35 @@ export default function AdminInventoryPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="size-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:ring-2 group-hover:ring-blue-200 transition-all">
-                              {item.image
-                                ? <img src={item.image} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              {item.imagenUrl
+                                ? <img src={item.imagenUrl} alt={item.nombre} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 : <Package className="w-5 h-5 text-slate-400" />}
                             </div>
                             <div>
-                              <p className="text-sm font-bold text-slate-800">{item.name}</p>
-                              <p className="text-[11px] text-slate-400">${item.price?.toLocaleString()} / ud.</p>
+                              <p className="text-sm font-bold text-slate-800">{item.nombre}</p>
+                              <p className="text-[11px] text-slate-400">${item.precioBase?.toLocaleString()} / ud.</p>
                             </div>
                           </div>
                         </td>
 
-                        {/* SKU */}
+                        {/* ID */}
                         <td className="px-6 py-4">
-                          <span className="font-mono text-[11px] text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">{item.sku}</span>
+                          <span className="font-mono text-[11px] text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                            {item.id.slice(0, 8).toUpperCase()}
+                          </span>
                         </td>
 
-                        {/* Categoría */}
+                        {/* Tipo */}
                         <td className="px-6 py-4">
-                          <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">{item.category}</span>
+                          <span className="text-[11px] font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">{item.tipo}</span>
                         </td>
 
                         {/* Stock */}
                         <td className="px-6 py-4">
-                          <p className="text-lg font-black text-slate-900 leading-none">{item.stock} <span className="text-[10px] text-slate-400 font-normal">uds</span></p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">mín. {item.stock_minimo}</p>
+                          <p className="text-lg font-black text-slate-900 leading-none">
+                            {item.stock ?? '—'} <span className="text-[10px] text-slate-400 font-normal">uds</span>
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">mín. 5</p>
                         </td>
 
                         {/* Nivel barra */}
@@ -358,44 +406,45 @@ export default function AdminInventoryPage() {
               <div className="p-7 grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="md:col-span-2">
                   <label className={labelClass}>Nombre del Insumo *</label>
-                  <input type="text" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})}
+                  <input type="text" value={newItem.nombre} onChange={e => setNewItem({ ...newItem, nombre: e.target.value })}
                     className={inputClass} placeholder="Ej. Cinta decorativa roja" />
                 </div>
                 <div>
-                  <label className={labelClass}>Categoría</label>
-                  <select value={newItem.category} onChange={e => setNewItem({...newItem, category: e.target.value})} className={inputClass}>
-                    {['Flores de Corte','Insumos','Accesorios','Ramos','Plantas'].map(c => <option key={c}>{c}</option>)}
+                  <label className={labelClass}>Tipo</label>
+                  <select value={newItem.tipo} onChange={e => setNewItem({ ...newItem, tipo: e.target.value })} className={inputClass}>
+                    {['Flores de Corte', 'Insumos', 'Accesorios', 'Ramos', 'Plantas'].map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className={labelClass}>Estado</label>
-                  <select value={newItem.status} onChange={e => setNewItem({...newItem, status: e.target.value})} className={inputClass}>
-                    <option>Activo</option><option>Inactivo</option>
+                  <select value={newItem.estado} onChange={e => setNewItem({ ...newItem, estado: e.target.value })} className={inputClass}>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>Costo Unitario (MXN) *</label>
-                  <input type="number" value={newItem.price} onChange={e => setNewItem({...newItem, price: Number(e.target.value)})}
+                  <label className={labelClass}>Precio Base (MXN) *</label>
+                  <input type="number" value={newItem.precioBase} onChange={e => setNewItem({ ...newItem, precioBase: Number(e.target.value) })}
                     className={inputClass} placeholder="0.00" />
                 </div>
                 <div>
-                  <label className={labelClass}>Stock Inicial</label>
-                  <input type="number" value={newItem.stock} onChange={e => setNewItem({...newItem, stock: Number(e.target.value)})}
-                    className={inputClass} placeholder="0" />
+                  <label className={labelClass}>Personalizable</label>
+                  <select
+                    value={newItem.esPersonalizable ? 'si' : 'no'}
+                    onChange={e => setNewItem({ ...newItem, esPersonalizable: e.target.value === 'si' })}
+                    className={inputClass}>
+                    <option value="no">No</option>
+                    <option value="si">Sí</option>
+                  </select>
                 </div>
-                <div>
-                  <label className={labelClass}>Stock Mínimo</label>
-                  <input type="number" value={newItem.stock_minimo} onChange={e => setNewItem({...newItem, stock_minimo: Number(e.target.value)})}
-                    className={inputClass} placeholder="5" />
-                </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className={labelClass}>URL de Imagen</label>
-                  <input type="text" value={newItem.image} onChange={e => setNewItem({...newItem, image: e.target.value})}
+                  <input type="text" value={newItem.imagenUrl} onChange={e => setNewItem({ ...newItem, imagenUrl: e.target.value })}
                     className={inputClass} placeholder="https://..." />
                 </div>
                 <div className="md:col-span-2">
                   <label className={labelClass}>Descripción</label>
-                  <textarea value={newItem.description} onChange={e => setNewItem({...newItem, description: e.target.value})}
+                  <textarea value={newItem.descripcion} onChange={e => setNewItem({ ...newItem, descripcion: e.target.value })}
                     className={`${inputClass} resize-none h-24`} placeholder="Descripción del insumo..." />
                 </div>
               </div>

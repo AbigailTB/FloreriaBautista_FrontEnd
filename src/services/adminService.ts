@@ -2,6 +2,18 @@ import {
   HealthCheckResponse,
   BackupsResponse,
   MaintenanceResponse,
+  DatabaseMonitorResponse,
+  Product,
+  ProductDetail,
+  ProductBody,
+  Order,
+  ApiResponse,
+  SingleResponse,
+  MeResponse,
+  User,
+  Flower,
+  FlowerBody,
+  ImportProductsResponse,
 } from '../types';
 
 const API_BASE = '/api/admin';
@@ -47,6 +59,14 @@ export const AdminService = {
       headers: await authHeaders(),
     });
     if (!res.ok) throw new Error('Error al ejecutar mantenimiento');
+    return res.json();
+  },
+
+  getDatabaseMonitor: async (): Promise<DatabaseMonitorResponse> => {
+    const res = await fetch(`${API_BASE}/database/monitor`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener datos del monitor de base de datos');
     return res.json();
   },
 
@@ -101,5 +121,242 @@ export const AdminService = {
     });
     if (!res.ok) throw new Error('Error al guardar configuración de respaldos');
     return res.json();
+  },
+
+  restoreBackup: async (backupId: string): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE}/backups/${backupId}/restore`, {
+      method: 'POST',
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  // ─── Productos públicos ───────────────────────────────────────
+  getProducts: async (params: {
+    busqueda?: string;
+    categoria?: string;
+    coleccion?: string;
+    page?: number;
+    size?: number;
+  } = {}): Promise<ApiResponse<Product>> => {
+    const query = new URLSearchParams();
+    if (params.busqueda !== undefined) query.set('busqueda', params.busqueda);
+    if (params.categoria !== undefined) query.set('categoria', params.categoria);
+    if (params.coleccion !== undefined) query.set('coleccion', params.coleccion);
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.size !== undefined) query.set('size', String(params.size));
+    const qs = query.toString();
+    const res = await fetch(`/api/products${qs ? `?${qs}` : ''}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener productos');
+    return res.json();
+  },
+
+  // ─── Productos admin ──────────────────────────────────────────
+  getAdminProducts: async (params: {
+    busqueda?: string;
+    estado?: string;
+    page?: number;
+    size?: number;
+  } = {}): Promise<ApiResponse<Product>> => {
+    const query = new URLSearchParams();
+    if (params.busqueda !== undefined) query.set('busqueda', params.busqueda);
+    if (params.estado !== undefined) query.set('estado', params.estado);
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.size !== undefined) query.set('size', String(params.size));
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE}/products${qs ? `?${qs}` : ''}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener productos admin');
+    return res.json();
+  },
+
+  getAdminProductById: async (productId: string): Promise<SingleResponse<ProductDetail>> => {
+    const res = await fetch(`${API_BASE}/products/${productId}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  createAdminProduct: async (body: ProductBody): Promise<ApiResponse<Product>> => {
+    const res = await fetch(`${API_BASE}/products`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Error al crear producto');
+    return res.json();
+  },
+
+  updateAdminProduct: async (productId: string, body: ProductBody): Promise<ApiResponse<Product>> => {
+    const res = await fetch(`${API_BASE}/products/${productId}`, {
+      method: 'PUT',
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Error al actualizar producto');
+    return res.json();
+  },
+
+  // ─── Exportación ──────────────────────────────────────────────
+  exportAdminProducts: async (): Promise<Blob> => {
+    const res = await fetch(`${API_BASE}/export/products`, {
+      headers: { Authorization: `Bearer ${await getToken()}` },
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.blob();
+  },
+
+  exportAdminInventory: async (): Promise<Blob> => {
+    const res = await fetch(`${API_BASE}/export/inventory`, {
+      headers: { Authorization: `Bearer ${await getToken()}` },
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.blob();
+  },
+
+  // ─── Importación ──────────────────────────────────────────────
+  importAdminProducts: async (file: File): Promise<ImportProductsResponse> => {
+    const form = new FormData();
+    form.append('archivo', file);
+    const res = await fetch(`${API_BASE}/import/products`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${await getToken()}` },
+      body: form,
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  importAdminInventory: async (file: File): Promise<void> => {
+    const form = new FormData();
+    form.append('archivo', file);
+    const res = await fetch(`${API_BASE}/import/inventory`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${await getToken()}` },
+      body: form,
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+  },
+
+  // ─── Usuario actual ───────────────────────────────────────────
+  getCurrentUser: async (): Promise<MeResponse> => {
+    const res = await fetch('/api/users/me', {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  // ─── Órdenes admin ────────────────────────────────────────────
+  getAdminOrders: async (params: {
+    estado?: string;
+    desde?: string;
+    hasta?: string;
+    page?: number;
+    size?: number;
+  } = {}): Promise<ApiResponse<Order>> => {
+    const query = new URLSearchParams();
+    if (params.estado !== undefined) query.set('estado', params.estado);
+    if (params.desde !== undefined) query.set('desde', params.desde);
+    if (params.hasta !== undefined) query.set('hasta', params.hasta);
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.size !== undefined) query.set('size', String(params.size));
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE}/orders${qs ? `?${qs}` : ''}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener órdenes');
+    return res.json();
+  },
+
+  // ─── Flores / Insumos ─────────────────────────────────────────
+  getFlowers: async (params: {
+    busqueda?: string;
+    color?: string;
+    bajoMinimo?: boolean;
+    estado?: string;
+    page?: number;
+    size?: number;
+  } = {}): Promise<ApiResponse<Flower>> => {
+    const query = new URLSearchParams();
+    if (params.busqueda !== undefined) query.set('busqueda', params.busqueda);
+    if (params.color !== undefined) query.set('color', params.color);
+    if (params.bajoMinimo !== undefined) query.set('bajoMinimo', String(params.bajoMinimo));
+    if (params.estado !== undefined) query.set('estado', params.estado);
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.size !== undefined) query.set('size', String(params.size));
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE}/flowers${qs ? `?${qs}` : ''}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener flores/insumos');
+    return res.json();
+  },
+
+  createFlower: async (body: FlowerBody): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE}/flowers`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  // ─── Usuarios admin ───────────────────────────────────────────
+  getAdminUsers: async (params: {
+    busqueda?: string;
+    rol?: string;
+    estado?: string;
+    page?: number;
+    size?: number;
+  } = {}): Promise<ApiResponse<User>> => {
+    const query = new URLSearchParams();
+    if (params.busqueda !== undefined) query.set('busqueda', params.busqueda);
+    if (params.rol !== undefined) query.set('rol', params.rol);
+    if (params.estado !== undefined) query.set('estado', params.estado);
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.size !== undefined) query.set('size', String(params.size));
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE}/users${qs ? `?${qs}` : ''}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  getAdminUserById: async (userId: string): Promise<ApiResponse<User>> => {
+    const res = await fetch(`${API_BASE}/users/${userId}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  updateAdminUserStatus: async (
+    userId: string,
+    activo: boolean,
+    motivo: string
+  ): Promise<void> => {
+    const res = await fetch(`${API_BASE}/users/${userId}/status`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ activo, motivo }),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+  },
+
+  updateAdminUserRoles: async (userId: string, roles: string[]): Promise<void> => {
+    const res = await fetch(`${API_BASE}/users/${userId}/roles`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ roles }),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
   },
 };

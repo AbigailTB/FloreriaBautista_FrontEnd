@@ -1,3 +1,58 @@
+export interface Product {
+  id: string;
+  nombre: string;
+  precioBase: number;
+  tipo: string;
+  estado: string;
+  imagenUrl: string | null;
+  stock: number | null;
+}
+
+export interface ProductDetail extends Product {
+  descripcion?: string;
+  esPersonalizable?: boolean;
+  categorias?: string[];
+  colecciones?: string[];
+  receta?: RecipeItem[];
+}
+
+export interface ProductBody {
+  nombre: string;
+  descripcion: string;
+  precioBase: number;
+  tipo: string;
+  esPersonalizable: boolean;
+  estado: string;
+  imagenUrl: string;
+  imagenes: string[];
+  categorias: string[];
+  colecciones: string[];
+  receta?: RecipeItem[];
+}
+
+export interface Order {
+  id: string;
+  estadoPedido: string;
+  fechaEntrega: string;
+  total: number;
+  nombreCliente: string;
+  fechaCreacion: string;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  total: number;
+  pagina: number;
+  tamanoPagina: number;
+  totalPaginas: number;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: PagedResult<T>;
+}
+
 export interface HealthCheckResponse {
   success: boolean;
   message: string;
@@ -44,4 +99,136 @@ export interface MaintenanceResponse {
   success: boolean;
   message: string;
   data: MaintenanceTask[];
+}
+
+export interface User {
+  id: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  telefono: string;
+  sexo: string | null;
+  fechaNacimiento: string | null;
+  estado: string;
+  correoVerificado: boolean;
+  roles: string[];
+  creadoEn: string;
+}
+
+export interface SingleResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export type MeResponse = SingleResponse<User>;
+
+// ─── Database Monitor ─────────────────────────────────────────────────────────
+export interface DbTable {
+  nombreTabla: string;
+  totalFilas: number;
+  tamanoTabla: string;
+  tamanoIndices: string;
+  tamanoTotal: string;
+  tamanoTotalBytes: number;
+}
+
+export interface DbConnection {
+  pid: number;
+  usuario: string;
+  baseDatos: string;
+  estado: string;
+  queryActual: string;
+  duracionQuery: string;
+  ipCliente: string;
+}
+
+export interface DbUnusedIndex {
+  nombreIndice: string;
+  nombreTabla: string;
+  columnas: string;
+  vecesUsado: number;
+  tamano: string;
+  recomendacion: string;
+}
+
+export interface DbSlowQuery {
+  query: string;
+  tiempoPromedioMs: number;
+  vecesEjecutado: number;
+  tiempoTotalMs: number;
+  baseDatos: string;
+}
+
+export interface DbStatistics {
+  tamanoTotalBd: string;
+  totalTransacciones: number;
+  cacheHits: number;
+  cacheMisses: number;
+  porcentajeCacheHit: number;
+  fechaUltimoVacuum: string;
+}
+
+export interface DatabaseMonitorData {
+  generadoEn: string;
+  tablas: DbTable[];
+  conexiones: DbConnection[];
+  indicesSinUso: DbUnusedIndex[];
+  queriesLentos: DbSlowQuery[];
+  estadisticas: DbStatistics;
+}
+
+export interface DatabaseMonitorResponse {
+  success: boolean;
+  message: string;
+  data: DatabaseMonitorData;
+}
+
+// ─── Flores / Insumos ────────────────────────────────────────────────────────
+export interface Flower {
+  id: string;
+  nombre: string;
+  color: string | null;
+  precioCosto: number;
+  unidadMedida: string;
+  esFlorPrimaria: boolean;
+  stockActual: number;
+  stockMinimo: number;
+  estado: string;
+  bajoMinimo: boolean;
+  creadoEn?: string;
+}
+
+export interface RecipeItem {
+  flowerId: string;
+  flowerNombre: string;
+  flowerPrecioCosto: number;
+  esFlorPrimaria: boolean;
+  cantidad: number;
+}
+
+export interface FlowerBody {
+  nombre: string;
+  color: string;
+  precioCosto: number;
+  unidadMedida: string;
+  esFlorPrimaria: boolean;
+  stockMinimo: number;
+}
+
+export interface ImportProductsResult {
+  archivo: string;
+  totalFilas: number;
+  insertados: number;
+  actualizados: number;
+  errores: number;
+  detalleErrores: string[];
+  ejecutadoEn: string;
+  duracionMs: number;
+}
+
+export interface ImportProductsResponse {
+  success: boolean;
+  message: string;
+  data: ImportProductsResult;
 }

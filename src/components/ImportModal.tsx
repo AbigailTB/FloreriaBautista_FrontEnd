@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (data: any[]) => void;
+  onConfirm: (data: any[], file: File) => void;
   title: string;
 }
 
@@ -27,32 +27,42 @@ export default function ImportModal({ isOpen, onClose, onConfirm, title }: Impor
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        if (selectedFile.name.endsWith('.csv') || selectedFile.name.endsWith('.xlsx')) {
+        let workbook: XLSX.WorkBook;
+        if (selectedFile.name.endsWith('.csv')) {
+          // Leer CSV como texto UTF-8 para preservar tildes y caracteres especiales
+          const text = event.target?.result as string;
+          workbook = XLSX.read(text, { type: 'string' });
+        } else if (selectedFile.name.endsWith('.xlsx')) {
           const data = new Uint8Array(event.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[firstSheetName];
-          const json = XLSX.utils.sheet_to_json(worksheet);
-          
-          if (json.length > 0) {
-            setPreviewData(json);
-          } else {
-            setError('El archivo está vacío o no tiene el formato correcto.');
-          }
+          workbook = XLSX.read(data, { type: 'array' });
         } else {
           setError('Formato no soportado. Por favor suba un archivo CSV o XLSX.');
+          return;
+        }
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet);
+
+        if (json.length > 0) {
+          setPreviewData(json);
+        } else {
+          setError('El archivo está vacío o no tiene el formato correcto.');
         }
       } catch (err) {
         setError('Error al procesar el archivo. Asegúrese de que el formato sea válido.');
       }
     };
 
-    reader.readAsArrayBuffer(selectedFile);
+    if (selectedFile.name.endsWith('.csv')) {
+      reader.readAsText(selectedFile, 'UTF-8');
+    } else {
+      reader.readAsArrayBuffer(selectedFile);
+    }
   };
 
   const handleConfirm = () => {
-    if (previewData.length > 0) {
-      onConfirm(previewData);
+    if (previewData.length > 0 && file) {
+      onConfirm(previewData, file);
       handleClose();
     }
   };
