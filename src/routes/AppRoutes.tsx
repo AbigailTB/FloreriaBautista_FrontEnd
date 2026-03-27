@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import HomePage from '../pages/client/HomePage';
+import ClientHomePage from '../pages/client/ClientHomePage';
 import CatalogPage from '../pages/client/CatalogPage';
 import AboutPage from '../pages/client/AboutPage';
 import ProductPage from '../pages/client/ProductPage';
@@ -45,6 +46,7 @@ export default function AnimatedRoutes() {
     <AnimatePresence mode="wait">
       <Routes location={location}>
         <Route path="/" element={<PageTransition><HomePage /></PageTransition>} />
+        <Route path="/inicio" element={<PageTransition><ClientHomePage /></PageTransition>} />
         <Route path="/dashboard" element={<PageTransition><DashboardPage /></PageTransition>} />
         <Route path="/admin/dashboard" element={<PageTransition><DashboardPage /></PageTransition>} />
         <Route path="/admin/reportes" element={<PageTransition><ReportsPage /></PageTransition>} />

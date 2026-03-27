@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ChevronRight, ChevronLeft, Star, Check, Lock, ShoppingCart, Sparkles, MessageCircle, Info, HelpCircle } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Star, Check, Lock, ShoppingCart, MessageCircle, Info, HelpCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import productsData from '../../data/products.json';
 import { useCart } from '../../hooks/useCart';
 import { FadeIn, ScaleIn, StaggerContainer, AnimatedButton, GlassCard } from '../../components/Animations';
 import { useToast } from '../../hooks/useToast';
+import { AdminService } from '../../services/adminService';
 
 export default function ProductPage({ user: initialUser }: { user?: any }) {
   const { id } = useParams();
@@ -15,37 +15,62 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
   const [selectedSize, setSelectedSize] = useState('premium');
   const { addToCart } = useCart();
   const [user, setUser] = useState<any>(initialUser);
+  const [product, setProduct] = useState<any>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loadingProduct, setLoadingProduct] = useState(true);
+  const [mainImage, setMainImage] = useState('https://picsum.photos/seed/placeholder/400/400');
 
   useEffect(() => {
     if (!initialUser) {
       const storedUser = localStorage.getItem('usuario') || localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
+      if (storedUser) setUser(JSON.parse(storedUser));
     }
   }, [initialUser]);
-  
-  // Find the current product based on ID, fallback to first product if not found
-  const product = productsData.find(p => p.id === id) || productsData[0];
-  
-  const [mainImage, setMainImage] = useState(product.image || 'https://picsum.photos/seed/placeholder/400/400');
 
-  // Update main image when product changes
   useEffect(() => {
-    setMainImage(product.image || 'https://picsum.photos/seed/placeholder/400/400');
-  }, [product]);
+    const loadProduct = async () => {
+      setLoadingProduct(true);
+      try {
+        const res = await AdminService.getPublicProductById(id!);
+        const p = res.data;
+        setProduct(p);
+        setMainImage(p.imagenUrl || 'https://picsum.photos/seed/placeholder/400/400');
+      } catch {
+        // Fallback: intentar con endpoint admin
+        try {
+          const res = await AdminService.getAdminProductById(id!);
+          const p = res.data;
+          setProduct(p);
+          setMainImage(p.imagenUrl || 'https://picsum.photos/seed/placeholder/400/400');
+        } catch {
+          setProduct(null);
+        }
+      } finally {
+        setLoadingProduct(false);
+      }
+    };
+
+    const loadRelated = async () => {
+      try {
+        const res = await AdminService.getProducts({ size: 5 });
+        setRelatedProducts(res.data.items.filter((p: any) => p.id !== id).slice(0, 4));
+      } catch {
+        setRelatedProducts([]);
+      }
+    };
+
+    if (id) {
+      loadProduct();
+      loadRelated();
+    }
+  }, [id]);
 
   const galleryImages = [
-    product.image || 'https://picsum.photos/seed/placeholder/400/400',
+    mainImage,
     'https://images.unsplash.com/photo-1561181286-d3fee7d55364?auto=format&fit=crop&q=80&w=800',
     'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&q=80&w=800',
     'https://images.unsplash.com/photo-1591886960571-74d43a9d4166?auto=format&fit=crop&q=80&w=800'
   ];
-
-  // Filter out current product and get up to 4 related products
-  const relatedProducts = productsData
-    .filter(p => p.id !== product.id && !p.isInventoryOnly)
-    .slice(0, 4);
 
   const handleAddToCart = (p: any) => {
     if (user && (user.role === 'cliente' || user.role === 'customer')) {
@@ -56,12 +81,29 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
     }
   };
 
+  if (loadingProduct) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-10 h-10 animate-spin text-brand-coral" />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+        <p className="text-xl font-bold text-slate-700">Producto no encontrado</p>
+        <button onClick={() => navigate('/catalogo')} className="text-brand-coral font-bold underline">Volver al catálogo</button>
+      </div>
+    );
+  }
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pt-32 min-h-screen font-display bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300">
       {/* Back Button */}
       <FadeIn>
-        <button 
-          onClick={() => navigate(-1)} 
+        <button
+          onClick={() => navigate(-1)}
           className="group flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-brand-coral transition-colors mb-6 font-bold uppercase tracking-widest text-xs"
         >
           <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center group-hover:bg-brand-coral group-hover:text-white transition-all">
@@ -78,7 +120,7 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
           <ChevronRight className="w-4 h-4 mx-2 opacity-50" />
           <Link to="/catalogo" className="hover:text-brand-coral transition-colors">Catálogo</Link>
           <ChevronRight className="w-4 h-4 mx-2 opacity-50" />
-          <span className="font-bold text-slate-900 dark:text-white">{product.name}</span>
+          <span className="font-bold text-slate-900 dark:text-white">{product.nombre}</span>
         </nav>
       </FadeIn>
 
@@ -127,10 +169,10 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
           <div className="flex flex-col h-full">
             <div className="mb-8">
               <span className="text-brand-coral font-black text-xs uppercase tracking-[0.3em] mb-3 block">
-                Colección Premium
+                {product.tipo || 'Colección Premium'}
               </span>
               <h1 className="text-5xl lg:text-6xl font-black text-slate-900 dark:text-white mb-4 leading-tight">
-                {product.name}
+                {product.nombre}
               </h1>
               <div className="flex items-center gap-4 mb-6">
                 <div className="flex text-yellow-400">
@@ -141,12 +183,12 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
                 <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">(48 Reseñas Verificadas)</span>
               </div>
               <div className="text-4xl font-black text-slate-900 dark:text-white">
-                ${product.price} <span className="text-lg font-bold text-slate-400 ml-2 uppercase tracking-widest">MXN</span>
+                ${product.precioBase} <span className="text-lg font-bold text-slate-400 ml-2 uppercase tracking-widest">MXN</span>
               </div>
             </div>
 
             <p className="text-lg text-slate-500 dark:text-slate-400 mb-10 leading-relaxed">
-              {(product as any).description || 'Un hermoso arreglo floral diseñado con las flores más frescas y seleccionadas para transmitir tus mejores sentimientos.'}
+              {product.descripcion || 'Un hermoso arreglo floral diseñado con las flores más frescas y seleccionadas para transmitir tus mejores sentimientos.'}
             </p>
 
             {/* Customization Form */}
@@ -156,7 +198,7 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
                 <label className="block text-xs font-black uppercase text-slate-400 mb-4 tracking-[0.2em]">Selecciona el tamaño</label>
                 <div className="grid grid-cols-3 gap-4">
                   {['estandar', 'deluxe', 'premium'].map((size) => (
-                    <button 
+                    <button
                       key={size}
                       onClick={() => setSelectedSize(size)}
                       className={`relative p-5 rounded-2xl text-center transition-all border-2 flex flex-col items-center justify-center gap-1 ${selectedSize === size ? 'border-brand-coral bg-brand-coral/5 shadow-lg shadow-brand-coral/5' : 'border-slate-200 dark:border-slate-800 hover:border-brand-coral/30'}`}
@@ -165,7 +207,7 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
                         {size}
                       </div>
                       <div className="text-lg font-black text-slate-900 dark:text-white">
-                        ${size === 'estandar' ? product.price : size === 'deluxe' ? product.price + 200 : product.price + 350}
+                        ${size === 'estandar' ? product.precioBase : size === 'deluxe' ? product.precioBase + 200 : product.precioBase + 350}
                       </div>
                       {selectedSize === size && (
                         <motion.div layoutId="size-check" className="absolute -top-2 -right-2 w-6 h-6 bg-brand-coral rounded-full flex items-center justify-center text-white shadow-lg">
@@ -310,31 +352,31 @@ export default function ProductPage({ user: initialUser }: { user?: any }) {
             <ScaleIn key={p.id}>
               <GlassCard className="group h-full flex flex-col overflow-hidden border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl hover:shadow-brand-coral/5 transition-all duration-500">
                 <div className="relative aspect-[4/5] overflow-hidden">
-                  <motion.div 
+                  <motion.div
                     whileHover={{ scale: 1.1 }}
                     transition={{ duration: 0.6 }}
-                    className="absolute inset-0 bg-center bg-cover" 
-                    style={{ backgroundImage: `url('${p.image}')` }}
+                    className="absolute inset-0 bg-center bg-cover"
+                    style={{ backgroundImage: `url('${p.imagenUrl || 'https://picsum.photos/seed/flower/400/400'}')` }}
                   />
-                  {p.stock <= 5 && (
+                  {(p.stock ?? 0) <= 5 && (
                     <div className="absolute top-6 right-0 bg-orange-500 text-white px-4 py-1.5 font-black text-[10px] uppercase tracking-widest rounded-l-full shadow-lg z-10">
                       Pocas unidades
                     </div>
                   )}
                 </div>
-                
+
                 <div className="p-8 flex flex-col flex-1">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <span className="text-[10px] font-black text-brand-coral uppercase tracking-widest mb-1 block">
-                        {p.category}
+                        {p.tipo}
                       </span>
                       <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-brand-coral transition-colors duration-300">
-                        {p.name}
+                        {p.nombre}
                       </h3>
                     </div>
                     <div className="text-xl font-black text-slate-900 dark:text-white">
-                      ${p.price}
+                      ${p.precioBase}
                     </div>
                   </div>
                   

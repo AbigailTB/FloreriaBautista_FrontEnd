@@ -70,11 +70,14 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
         {/* Logo Section */}
         <div className="h-16 flex items-center px-6 border-b border-white/10">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <img
-              src="/Logo.png"
-              alt="Logo"
-              className="w-8 h-8 object-contain"
-            />
+            <div className="relative">
+              <img
+                src="/Logo.png"
+                alt="Logo"
+                className="w-8 h-8 object-contain relative z-10"
+              />
+              <div className="absolute inset-0 bg-[#FBBF24] blur-lg opacity-20 animate-pulse" />
+            </div>
             <span className="font-bold text-lg">
               <span className="text-white">Florería </span>
               <span className="text-[#eab308]">Bautista</span>
@@ -255,7 +258,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-semibold text-[#1e3a5f]">
-                  {user?.name || "Carlos Bautista"}
+                  {user?.nombre ?? user?.name ?? "Administrador"}
                 </p>
                 <p className="text-xs text-gray-400 capitalize">
                   {user?.role || "Propietario"}

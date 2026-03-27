@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Package,
   AlertTriangle,
@@ -13,29 +13,74 @@ import {
   DownloadCloud,
   TrendingUp,
   ChevronRight,
-  Boxes
+  Boxes,
+  Flower2,
+  Leaf,
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  Pencil,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AdminService } from '../../services/adminService';
-import { Product, ProductBody, ImportProductsResult } from '../../types';
+import { Product, ProductBody, ImportProductsResult, Flower, FlowerBody } from '../../types';
 import { FadeIn, ScaleIn, StaggerContainer, AnimatedButton, GlassCard } from '../../components/Animations';
 import ImportModal from '../../components/ImportModal';
 import ExportModal from '../../components/ExportModal';
 import { useToast } from '../../hooks/useToast';
 
+const COLOR_DOT: Record<string, string> = {
+  Rojo:     'bg-red-500',
+  Rosa:     'bg-pink-400',
+  Blanco:   'bg-slate-200 border border-slate-300',
+  Amarillo: 'bg-yellow-400',
+  Morado:   'bg-purple-500',
+  Azul:     'bg-blue-500',
+  Verde:    'bg-emerald-500',
+  Naranja:  'bg-orange-400',
+};
+
+const FLORES_PAGE_SIZE = 20;
+
 export default function AdminInventoryPage() {
+  const { showToast } = useToast();
+
+  // ── Tab ──────────────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<'flores' | 'productos'>('flores');
+
+  // ── Productos ────────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('Todas');
   const [inventory, setInventory] = useState<Product[]>([]);
   const [stats, setStats] = useState({ totalValue: 0, criticalItems: 0, entriesMonth: 0, exitsMonth: 0 });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [importResult, setImportResult] = useState<ImportProductsResult | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const { showToast } = useToast();
+
+  // ── Flores ───────────────────────────────────────────────────────────────────
+  const [flores, setFlores]               = useState<Flower[]>([]);
+  const [floresTotal, setFloresTotal]     = useState(0);
+  const [floresTotalPags, setFloresTotalPags] = useState(1);
+  const [floresPage, setFloresPage]       = useState(1);
+  const [floresLoading, setFloresLoading] = useState(false);
+  const [floresBusqueda, setFloresBusqueda] = useState('');
+  const [floresColor, setFloresColor]     = useState('');
+  const [floresEstado, setFloresEstado]   = useState('');
+  const [floresBajoMin, setFloresBajoMin] = useState<boolean | undefined>(undefined);
+  const [isFloresImportOpen, setIsFloresImportOpen] = useState(false);
+  const [floresExporting, setFloresExporting] = useState(false);
+  const [isAddFlorOpen, setIsAddFlorOpen] = useState(false);
+  const [newFlor, setNewFlor] = useState<FlowerBody>({
+    nombre: '', color: '', precioCosto: 0, unidadMedida: 'pieza', esFlorPrimaria: true, stockMinimo: 0,
+  });
+  const [editingFlor, setEditingFlor] = useState<Flower | null>(null);
+  const [editFlorForm, setEditFlorForm] = useState<FlowerBody>({
+    nombre: '', color: '', precioCosto: 0, unidadMedida: 'pieza', esFlorPrimaria: true, stockMinimo: 0,
+  });
 
   const [newItem, setNewItem] = useState<Partial<ProductBody>>({
     nombre: '', tipo: 'Insumos', precioBase: 0, descripcion: '',
@@ -58,9 +103,34 @@ export default function AdminInventoryPage() {
     }
   };
 
+  const loadFlores = useCallback(async () => {
+    setFloresLoading(true);
+    try {
+      const res = await AdminService.getFlowers({
+        busqueda:   floresBusqueda || undefined,
+        color:      floresColor    || undefined,
+        estado:     floresEstado   || undefined,
+        bajoMinimo: floresBajoMin,
+        page:       floresPage,
+        size:       FLORES_PAGE_SIZE,
+      });
+      setFlores(res.data.items);
+      setFloresTotal(res.data.total);
+      setFloresTotalPags(res.data.totalPaginas);
+    } catch {
+      showToast('Error al cargar flores/insumos', 'error');
+    } finally {
+      setFloresLoading(false);
+    }
+  }, [floresBusqueda, floresColor, floresEstado, floresBajoMin, floresPage]);
+
   useEffect(() => {
-    loadInventory();
-  }, []);
+    if (activeTab === 'flores') loadFlores();
+    if (activeTab === 'productos' && inventory.length === 0) loadInventory();
+  }, [activeTab, loadFlores]);
+
+  // Reset página al cambiar filtros de flores
+  useEffect(() => { setFloresPage(1); }, [floresBusqueda, floresColor, floresEstado, floresBajoMin]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -103,6 +173,46 @@ export default function AdminInventoryPage() {
       setNewItem({ nombre: '', tipo: 'Insumos', precioBase: 0, descripcion: '', esPersonalizable: false, estado: 'activo', imagenUrl: '', categorias: [], colecciones: [] });
     } catch {
       showToast('Error al añadir insumo', 'error');
+    }
+  };
+
+  const openEditFlor = (flor: Flower) => {
+    setEditingFlor(flor);
+    setEditFlorForm({
+      nombre: flor.nombre,
+      color: flor.color ?? '',
+      precioCosto: flor.precioCosto,
+      unidadMedida: flor.unidadMedida,
+      esFlorPrimaria: flor.esFlorPrimaria,
+      stockMinimo: flor.stockMinimo,
+    });
+  };
+
+  const handleEditFlor = async () => {
+    if (!editingFlor) return;
+    try {
+      await AdminService.updateFlower(editingFlor.id, editFlorForm);
+      await loadFlores();
+      showToast('Flor/insumo actualizado correctamente', 'success');
+      setEditingFlor(null);
+    } catch (err: any) {
+      showToast(`Error al actualizar: ${err.message ?? 'desconocido'}`, 'error');
+    }
+  };
+
+  const handleAddFlor = async () => {
+    if (!newFlor.nombre || newFlor.precioCosto === undefined) {
+      showToast('Completa los campos obligatorios.', 'error');
+      return;
+    }
+    try {
+      await AdminService.createFlower(newFlor);
+      await loadFlores();
+      showToast('Flor/insumo añadido exitosamente', 'success');
+      setIsAddFlorOpen(false);
+      setNewFlor({ nombre: '', color: '', precioCosto: 0, unidadMedida: 'pieza', esFlorPrimaria: true, stockMinimo: 0 });
+    } catch (err: any) {
+      showToast(`Error al añadir: ${err.message ?? 'desconocido'}`, 'error');
     }
   };
 
@@ -162,25 +272,234 @@ export default function AdminInventoryPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {[
-              { label: 'Importar',    icon: UploadCloud,   action: () => setIsImportModalOpen(true) },
-              { label: 'Exportar',    icon: DownloadCloud, action: () => setIsExportModalOpen(true) },
-              { label: 'Movimientos', icon: History,       action: () => setIsMovementsModalOpen(true) },
-            ].map(btn => (
-              <AnimatedButton key={btn.label} onClick={btn.action}
+            {activeTab === 'flores' && <>
+              {[
+                { label: 'Importar', icon: UploadCloud,   action: () => setIsFloresImportOpen(true) },
+                { label: floresExporting ? 'Exportando...' : 'Exportar', icon: DownloadCloud, action: async () => {
+                    setFloresExporting(true);
+                    try {
+                      const { blob, filename } = await AdminService.exportFlowers();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url; a.download = filename;
+                      document.body.appendChild(a); a.click();
+                      a.remove(); URL.revokeObjectURL(url);
+                      showToast('Exportación descargada correctamente', 'success');
+                    } catch (err: any) {
+                      showToast(`Error al exportar: ${err.message ?? 'desconocido'}`, 'error');
+                    } finally { setFloresExporting(false); }
+                  }},
+              ].map(btn => (
+                <AnimatedButton key={btn.label} onClick={btn.action}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:border-slate-300 hover:shadow-sm transition-all">
+                  <btn.icon className="w-4 h-4" />
+                  {btn.label}
+                </AnimatedButton>
+              ))}
+              <AnimatedButton onClick={loadFlores}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:border-slate-300 hover:shadow-sm transition-all">
-                <btn.icon className="w-4 h-4" />
-                {btn.label}
+                <RefreshCw className={`w-4 h-4 ${floresLoading ? 'animate-spin' : ''}`} />
+                Actualizar
               </AnimatedButton>
-            ))}
-            <AnimatedButton onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/25 transition-all">
-              <Plus className="w-4 h-4" />
-              Añadir Insumo
-            </AnimatedButton>
+              <AnimatedButton onClick={() => setIsAddFlorOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/25 transition-all">
+                <Plus className="w-4 h-4" />
+                Agregar Flor
+              </AnimatedButton>
+            </>}
+            {activeTab === 'productos' && <>
+              {[
+                { label: 'Importar',    icon: UploadCloud,   action: () => setIsImportModalOpen(true) },
+                { label: 'Exportar',    icon: DownloadCloud, action: () => setIsExportModalOpen(true) },
+                { label: 'Movimientos', icon: History,       action: () => setIsMovementsModalOpen(true) },
+              ].map(btn => (
+                <AnimatedButton key={btn.label} onClick={btn.action}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:border-slate-300 hover:shadow-sm transition-all">
+                  <btn.icon className="w-4 h-4" />
+                  {btn.label}
+                </AnimatedButton>
+              ))}
+              <AnimatedButton onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/25 transition-all">
+                <Plus className="w-4 h-4" />
+                Añadir Insumo
+              </AnimatedButton>
+            </>}
           </div>
         </div>
       </FadeIn>
+
+      {/* ── TABS ── */}
+      <FadeIn>
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-2xl w-fit">
+          {([
+            { key: 'flores',    label: 'Flores / Insumos', icon: <Flower2 className="w-4 h-4" /> },
+            { key: 'productos', label: 'Productos',         icon: <Package className="w-4 h-4" /> },
+          ] as const).map(tab => (
+            <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all ${
+                activeTab === tab.key
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}>
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </FadeIn>
+
+      {/* ══ PANEL FLORES ══════════════════════════════════════════════════════════ */}
+      {activeTab === 'flores' && (
+        <AnimatePresence mode="wait">
+          <motion.div key="flores" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+
+            {/* Stats flores */}
+            <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total registros',   value: floresTotal,                                         icon: <Flower2 className="w-[18px] h-[18px]" />, color: 'text-pink-600',    bg: 'bg-pink-50',    border: 'border-pink-100' },
+                { label: 'Flores primarias',  value: flores.filter(f => f.esFlorPrimaria).length,         icon: <Flower2 className="w-[18px] h-[18px]" />, color: 'text-rose-600',    bg: 'bg-rose-50',    border: 'border-rose-100' },
+                { label: 'Insumos / follaje', value: flores.filter(f => !f.esFlorPrimaria).length,        icon: <Leaf    className="w-[18px] h-[18px]" />, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+                { label: 'Bajo mínimo',       value: flores.filter(f => f.bajoMinimo).length,             icon: <AlertTriangle className="w-[18px] h-[18px]" />, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+              ].map((s, i) => (
+                <motion.div key={i} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
+                  className={`bg-white border ${s.border} rounded-2xl p-5 flex flex-col gap-3 hover:shadow-md transition-shadow`}>
+                  <div className={`size-9 rounded-xl ${s.bg} ${s.color} flex items-center justify-center`}>{s.icon}</div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.label}</p>
+                    <p className={`text-2xl font-black mt-0.5 ${s.color}`}>{s.value}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </StaggerContainer>
+
+            {/* Filtros flores */}
+            <div className="flex flex-wrap items-center gap-3 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+              <div className="flex-1 min-w-[220px] relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input type="text" placeholder="Buscar por nombre..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 transition-all"
+                  value={floresBusqueda} onChange={e => setFloresBusqueda(e.target.value)} />
+              </div>
+              <select className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 transition-all"
+                value={floresColor} onChange={e => setFloresColor(e.target.value)}>
+                <option value="">Todos los colores</option>
+                {['Rojo','Rosa','Blanco','Amarillo','Morado','Azul','Verde','Naranja'].map(c => <option key={c}>{c}</option>)}
+              </select>
+              <select className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-400 transition-all"
+                value={floresEstado} onChange={e => setFloresEstado(e.target.value)}>
+                <option value="">Todos los estados</option>
+                <option value="ACTIVA">Activa</option>
+                <option value="INACTIVA">Inactiva</option>
+              </select>
+              <button onClick={() => setFloresBajoMin(prev => prev === true ? undefined : true)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                  floresBajoMin ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                }`}>
+                <AlertTriangle className="w-4 h-4" /> Bajo mínimo
+              </button>
+              <span className="ml-auto text-xs font-medium text-slate-400">
+                {flores.length} <span className="text-slate-300">/ {floresTotal}</span> flores
+              </span>
+            </div>
+
+            {/* Tabla flores */}
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+              {floresLoading ? (
+                <div className="flex items-center justify-center h-52">
+                  <RefreshCw className="w-7 h-7 text-pink-500 animate-spin" />
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100">
+                        {['Flor / Insumo', 'Color', 'Tipo', 'Precio costo', 'Stock', 'Estado', ''].map(h => (
+                          <th key={h} className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <AnimatePresence mode="popLayout">
+                        {flores.map((flor, idx) => (
+                          <motion.tr key={flor.id} layout
+                            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                            transition={{ delay: idx * 0.02 }}
+                            className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="text-sm font-bold text-slate-800">{flor.nombre}</p>
+                              <p className="text-[11px] text-slate-400 mt-0.5">{flor.unidadMedida}</p>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-3 h-3 rounded-full shrink-0 ${COLOR_DOT[flor.color ?? ''] ?? 'bg-slate-300'}`} />
+                                <span className="text-sm text-slate-600">{flor.color ?? '—'}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {flor.esFlorPrimaria
+                                ? <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-100"><Flower2 className="w-3 h-3" /> Primaria</span>
+                                : <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100"><Leaf className="w-3 h-3" /> Insumo</span>
+                              }
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-sm font-black text-slate-900">$/ {flor.precioCosto.toFixed(2)}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-lg font-black leading-none ${flor.bajoMinimo ? 'text-amber-600' : 'text-slate-900'}`}>{flor.stockActual}</span>
+                                <span className="text-[10px] text-slate-400">/ mín {flor.stockMinimo}</span>
+                                {flor.bajoMinimo && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {flor.estado === 'ACTIVA'
+                                ? <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100"><CheckCircle2 className="w-3 h-3" /> Activa</span>
+                                : <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200"><XCircle className="w-3 h-3" /> Inactiva</span>
+                              }
+                            </td>
+                            <td className="px-4 py-4">
+                              <button onClick={() => openEditFlor(flor)}
+                                className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </AnimatePresence>
+                      {!floresLoading && flores.length === 0 && (
+                        <tr><td colSpan={6} className="py-16 text-center text-sm text-slate-400">No se encontraron flores o insumos</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Footer paginación */}
+              <div className="px-6 py-3.5 border-t border-slate-50 bg-slate-50/50 flex items-center justify-between flex-wrap gap-3">
+                <span className="text-xs text-slate-400">{flores.length} de {floresTotal} registros</span>
+                {floresTotalPags > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setFloresPage(p => Math.max(1, p - 1))} disabled={floresPage === 1}
+                      className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 transition-all">
+                      <ChevronLeft className="w-4 h-4 text-slate-600" />
+                    </button>
+                    <span className="text-xs font-black text-slate-700 px-2">{floresPage} / {floresTotalPags}</span>
+                    <button onClick={() => setFloresPage(p => Math.min(floresTotalPags, p + 1))} disabled={floresPage === floresTotalPags}
+                      className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 transition-all">
+                      <ChevronRight className="w-4 h-4 text-slate-600" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {/* ══ PANEL PRODUCTOS ═══════════════════════════════════════════════════════ */}
+      {activeTab === 'productos' && <>
 
       {/* ── STATS ── */}
       <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -383,9 +702,159 @@ export default function AdminInventoryPage() {
         </div>
       </FadeIn>
 
-      {/* Modals externos */}
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onConfirm={handleImportConfirm} title="Importar Inventario" />
-      <ExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} data={filteredInventory} title="Reporte de Inventario" filename="inventario" />
+      </> /* fin panel productos */}
+
+      {/* Modals Productos */}
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onConfirm={handleImportConfirm} title="Importar Productos" />
+      <ExportModal isOpen={isExportModalOpen} onClose={() => setIsExportModalOpen(false)} data={filteredInventory} title="Reporte de Productos" filename="inventario_productos" />
+
+      {/* Modals Flores */}
+      <ImportModal isOpen={isFloresImportOpen} onClose={() => setIsFloresImportOpen(false)} onConfirm={async (_d, file) => { try { const res = await AdminService.importFlowers(file); await loadFlores(); showToast(res.message, 'success'); } catch (err: any) { showToast(`Error al importar: ${err.message ?? 'desconocido'}`, 'error'); } finally { setIsFloresImportOpen(false); } }} title="Importar Flores / Insumos" />
+
+      {/* ── EDIT FLOR MODAL ── */}
+      <AnimatePresence>
+        {editingFlor && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setEditingFlor(null)} />
+            <ScaleIn className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-slate-100 px-7 py-5 flex items-center justify-between z-10 rounded-t-2xl">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">Editar Flor / Insumo</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">{editingFlor.nombre}</p>
+                </div>
+                <button onClick={() => setEditingFlor(null)} className="size-8 flex items-center justify-center bg-slate-100 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <div className="p-7 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Nombre *</label>
+                  <input type="text" value={editFlorForm.nombre}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFlorForm({ ...editFlorForm, nombre: e.target.value })}
+                    className={inputClass} placeholder="Ej. Rosa Roja..." />
+                </div>
+                <div>
+                  <label className={labelClass}>Color</label>
+                  <input type="text" value={editFlorForm.color}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFlorForm({ ...editFlorForm, color: e.target.value })}
+                    className={inputClass} placeholder="Ej. Rojo, Rosa..." />
+                </div>
+                <div>
+                  <label className={labelClass}>Unidad de Medida</label>
+                  <select value={editFlorForm.unidadMedida}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditFlorForm({ ...editFlorForm, unidadMedida: e.target.value })}
+                    className={inputClass}>
+                    {['pieza', 'tallo', 'ramo', 'metro', 'kg', 'litro'].map(u => <option key={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Precio Costo (MXN) *</label>
+                  <input type="number" value={editFlorForm.precioCosto}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFlorForm({ ...editFlorForm, precioCosto: Number(e.target.value) })}
+                    className={inputClass} min={0} />
+                </div>
+                <div>
+                  <label className={labelClass}>Stock Mínimo</label>
+                  <input type="number" value={editFlorForm.stockMinimo}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFlorForm({ ...editFlorForm, stockMinimo: Number(e.target.value) })}
+                    className={inputClass} min={0} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Tipo</label>
+                  <div className="flex gap-3">
+                    {[{ value: true, label: 'Flor Primaria' }, { value: false, label: 'Insumo / Accesorio' }].map(opt => (
+                      <button key={String(opt.value)} type="button"
+                        onClick={() => setEditFlorForm({ ...editFlorForm, esFlorPrimaria: opt.value })}
+                        className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${editFlorForm.esFlorPrimaria === opt.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-slate-100 px-7 py-5 flex justify-end gap-3 rounded-b-2xl">
+                <button onClick={() => setEditingFlor(null)} className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                  Cancelar
+                </button>
+                <AnimatedButton onClick={handleEditFlor}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors">
+                  Guardar cambios
+                </AnimatedButton>
+              </div>
+            </ScaleIn>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── ADD FLOR MODAL ── */}
+      <AnimatePresence>
+        {isAddFlorOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsAddFlorOpen(false)} />
+            <ScaleIn className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-slate-100 px-7 py-5 flex items-center justify-between z-10 rounded-t-2xl">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">Nueva Flor / Insumo</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Completa los campos para añadir al inventario</p>
+                </div>
+                <button onClick={() => setIsAddFlorOpen(false)} className="size-8 flex items-center justify-center bg-slate-100 rounded-lg text-slate-500 hover:bg-slate-200 transition-colors">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+              </div>
+              <div className="p-7 grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Nombre *</label>
+                  <input type="text" value={newFlor.nombre} onChange={e => setNewFlor({ ...newFlor, nombre: e.target.value })}
+                    className={inputClass} placeholder="Ej. Rosa Roja, Cinta Verde..." />
+                </div>
+                <div>
+                  <label className={labelClass}>Color</label>
+                  <input type="text" value={newFlor.color} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewFlor({ ...newFlor, color: e.target.value })}
+                    className={inputClass} placeholder="Ej. Rojo, Rosa, Blanco..." />
+                </div>
+                <div>
+                  <label className={labelClass}>Unidad de Medida</label>
+                  <select value={newFlor.unidadMedida} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewFlor({ ...newFlor, unidadMedida: e.target.value })} className={inputClass}>
+                    {['pieza', 'tallo', 'ramo', 'metro', 'kg', 'litro'].map(u => <option key={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Precio Costo (MXN) *</label>
+                  <input type="number" value={newFlor.precioCosto} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewFlor({ ...newFlor, precioCosto: Number(e.target.value) })}
+                    className={inputClass} placeholder="0.00" min={0} />
+                </div>
+                <div>
+                  <label className={labelClass}>Stock Mínimo</label>
+                  <input type="number" value={newFlor.stockMinimo} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewFlor({ ...newFlor, stockMinimo: Number(e.target.value) })}
+                    className={inputClass} placeholder="0" min={0} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Tipo</label>
+                  <div className="flex gap-3">
+                    {[{ value: true, label: 'Flor Primaria' }, { value: false, label: 'Insumo / Accesorio' }].map(opt => (
+                      <button key={String(opt.value)} type="button" onClick={() => setNewFlor({ ...newFlor, esFlorPrimaria: opt.value })}
+                        className={`flex-1 py-3 rounded-xl border-2 text-sm font-bold transition-all ${newFlor.esFlorPrimaria === opt.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-slate-100 px-7 py-5 flex justify-end gap-3 rounded-b-2xl">
+                <button onClick={() => setIsAddFlorOpen(false)} className="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                  Cancelar
+                </button>
+                <AnimatedButton onClick={handleAddFlor}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors">
+                  Guardar
+                </AnimatedButton>
+              </div>
+            </ScaleIn>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ── ADD MODAL ── */}
       <AnimatePresence>

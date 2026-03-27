@@ -7,10 +7,15 @@ const api = axios.create({
 
 api.interceptors.request.use(async (config) => {
   try {
-    const tokenRes = await fetch('/api/dev/token');
-    if (tokenRes.ok) {
-      const token = await tokenRes.text();
-      config.headers.Authorization = `Bearer ${token.trim()}`;
+    const stored = localStorage.getItem('accessToken');
+    if (stored && !stored.startsWith('local-token-')) {
+      config.headers.Authorization = `Bearer ${stored}`;
+    } else {
+      const tokenRes = await fetch('/api/dev/token');
+      if (tokenRes.ok) {
+        const token = await tokenRes.text();
+        config.headers.Authorization = `Bearer ${token.trim()}`;
+      }
     }
   } catch {
     // Continuar sin token si falla

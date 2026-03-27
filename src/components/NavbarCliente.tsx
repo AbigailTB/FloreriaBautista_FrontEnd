@@ -180,7 +180,7 @@ export function NavbarCliente() {
               >
                 <div className="text-right hidden xl:block">
                   <p className="text-xs font-black leading-none text-white group-hover:text-[#FBBF24] transition-colors">
-                    {user?.name || 'Usuario'}
+                    {user?.nombre || user?.name || 'Usuario'}
                   </p>
                   <p className="text-[10px] text-[#FBBF24]/80 font-bold tracking-wider uppercase mt-1">
                     {user?.role === 'cliente' ? 'Cliente Oro' : user?.role || 'Invitado'}
@@ -341,7 +341,7 @@ export function NavbarCliente() {
                       className="w-12 h-12 rounded-full border-2 border-[#FBBF24]"
                     />
                     <div>
-                      <p className="font-black text-white">{user?.name || 'Usuario'}</p>
+                      <p className="font-black text-white">{user?.nombre || user?.name || 'Usuario'}</p>
                       <p className="text-xs text-[#FBBF24] font-bold uppercase tracking-wider">{user?.role === 'cliente' ? 'Cliente Oro' : user?.role || 'Invitado'}</p>
                     </div>
                   </div>

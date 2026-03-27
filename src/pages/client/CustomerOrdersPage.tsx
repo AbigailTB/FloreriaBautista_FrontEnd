@@ -15,7 +15,7 @@ import {
   Heart
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { DataService } from '../../services/dataService';
+import { AdminService } from '../../services/adminService';
 
 export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -25,18 +25,22 @@ export default function CustomerOrdersPage() {
 
   useEffect(() => {
     const storedUser = localStorage.getItem('usuario') || localStorage.getItem('user');
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      const allOrders = DataService.getOrders();
-      const userOrders = allOrders.filter(o => o.customerId === parsedUser.id);
-      const finalOrders = userOrders.length > 0 ? userOrders : allOrders.slice(0, 3);
-      setOrders(finalOrders);
-      if (finalOrders.length > 0) {
-        setSelectedOrder(finalOrders[0]);
+    if (storedUser) setUser(JSON.parse(storedUser));
+
+    const loadOrders = async () => {
+      try {
+        const res = await AdminService.getMyOrders();
+        const items = res.data?.items ?? [];
+        setOrders(items);
+        if (items.length > 0) setSelectedOrder(items[0]);
+      } catch {
+        setOrders([]);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    loadOrders();
   }, []);
 
   const getStatusColor = (status: string) => {
@@ -114,17 +118,16 @@ export default function CustomerOrdersPage() {
                     <span className={`text-xs font-bold uppercase tracking-wider ${selectedOrder?.id === order.id ? 'text-[#ec5b13]' : 'text-slate-400'}`}>
                       #FB-{order.id}
                     </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(order.status)}`}>
-                      {order.status}
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${getStatusColor(order.estadoPedido ?? order.status)}`}>
+                      {order.estadoPedido ?? order.status}
                     </span>
                   </div>
                   <h3 className="font-bold text-slate-900 truncate mb-1">
-                    {order.items[0]?.productName || 'Pedido Floral'}
-                    {order.items.length > 1 && ` +${order.items.length - 1} más`}
+                    {order.nombreCliente || order.items?.[0]?.productName || 'Pedido Floral'}
                   </h3>
                   <p className="text-xs text-slate-500 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> 
-                    {new Date(order.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <Calendar className="w-3 h-3" />
+                    {new Date(order.fechaCreacion ?? order.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                   <div className="mt-4 flex items-center justify-between">
                     <span className="text-lg font-black text-slate-900">${(order.total || 0).toLocaleString()}</span>
@@ -149,7 +152,7 @@ export default function CustomerOrdersPage() {
                     <div>
                       <h3 className="text-2xl font-black text-[#1a3b5b]">Detalle del Pedido #FB-{selectedOrder.id}</h3>
                       <p className="text-sm text-slate-500">
-                        Realizado el {new Date(selectedOrder.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} a las {new Date(selectedOrder.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                        Realizado el {new Date(selectedOrder.fechaCreacion ?? selectedOrder.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })} a las {new Date(selectedOrder.fechaCreacion ?? selectedOrder.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                     <div className="flex gap-3">

@@ -16,13 +16,15 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      host: '0.0.0.0',      // 👈 agregar esto
+      port: 5173,           // 👈 agregar esto también
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: {
         usePolling: true,
       },
       proxy: {
         '/api': {
-          target: 'http://localhost:5000',
+          target: 'http://api:5000',  // 👈 nombre del servicio en docker-compose
           changeOrigin: true,
           secure: false,
         },

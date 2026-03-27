@@ -39,8 +39,12 @@ export default function BackupsPage() {
   const [loadingTabla, setLoadingTabla] = useState(false);
   const [resultTabla, setResultTabla] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  const [frecuencia, setFrecuencia] = useState('diario');
+  const [frecuencia, setFrecuencia] = useState('DIARIO');
   const [hora, setHora] = useState('02:00');
+  const [diaSemana, setDiaSemana] = useState(0);
+  const [backupActivo, setBackupActivo] = useState(true);
+  const [mantenimientoActivo, setMantenimientoActivo] = useState(true);
+  const [schedulerInfo, setSchedulerInfo] = useState<{ proximoBackup: string; proximoMantenimiento: string } | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [resultConfig, setResultConfig] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -50,12 +54,6 @@ export default function BackupsPage() {
   const [filterEstado, setFilterEstado] = useState('');
   const [sortBy, setSortBy] = useState<'fecha' | 'tamano'>('fecha');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-
-  // Auto-backup config
-  const [autoEnabled, setAutoEnabled] = useState(false);
-  const [autoFrecuencia, setAutoFrecuencia] = useState('CADA_DIA');
-  const [loadingAutoConfig, setLoadingAutoConfig] = useState(false);
-  const [resultAutoConfig, setResultAutoConfig] = useState<{ ok: boolean; msg: string; nextRun?: string } | null>(null);
 
   // Restore modal
   const [restoreBackup, setRestoreBackup] = useState<Backup | null>(null);
@@ -110,33 +108,27 @@ export default function BackupsPage() {
     setLoadingConfig(true);
     setResultConfig(null);
     try {
-      const res = await AdminService.saveBackupConfig(frecuencia, hora);
+      const horaNum = parseInt(hora.split(':')[0], 10);
+      const res = await AdminService.saveSchedulerConfig({
+        backupAutomaticoActivo: backupActivo,
+        frecuencia,
+        diaSemana,
+        hora: isNaN(horaNum) ? 2 : horaNum,
+        mantenimientoActivo,
+      });
       setResultConfig({ ok: res.success, msg: res.message || 'Configuración guardada exitosamente.' });
+      if (res.success && res.data) {
+        const d = res.data;
+        setFrecuencia(d.frecuencia);
+        setHora(d.horaFormato);
+        setDiaSemana(d.diaSemana);
+        setBackupActivo(d.backupAutomaticoActivo);
+        setMantenimientoActivo(d.mantenimientoActivo);
+        setSchedulerInfo({ proximoBackup: d.proximoBackup, proximoMantenimiento: d.proximoMantenimiento });
+      }
     } catch (err: any) {
       setResultConfig({ ok: false, msg: err.message });
     } finally { setLoadingConfig(false); }
-  };
-
-  const handleSaveAutoConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoadingAutoConfig(true);
-    setResultAutoConfig(null);
-    try {
-      const res = await AdminService.saveBackupConfig(autoFrecuencia, '');
-      // Calculate estimated next run
-      const nextMap: Record<string, string> = {
-        CADA_HORA: '1 hora',
-        CADA_6_HORAS: '6 horas',
-        CADA_DIA: '24 horas',
-      };
-      setResultAutoConfig({
-        ok: res.success,
-        msg: res.message || 'Configuración automática guardada.',
-        nextRun: autoEnabled ? `Próxima ejecución estimada: en ${nextMap[autoFrecuencia] ?? '?'}` : undefined,
-      });
-    } catch (err: any) {
-      setResultAutoConfig({ ok: false, msg: err.message });
-    } finally { setLoadingAutoConfig(false); }
   };
 
   const handleRestore = async () => {
@@ -152,7 +144,20 @@ export default function BackupsPage() {
     } finally { setLoadingRestore(false); }
   };
 
-  useEffect(() => { loadBackups(); }, []);
+  useEffect(() => {
+    loadBackups();
+    AdminService.getScheduler().then(res => {
+      if (res.success && res.data) {
+        const d = res.data;
+        setFrecuencia(d.frecuencia ?? 'DIARIO');
+        setHora(d.horaFormato ?? '02:00');
+        setDiaSemana(d.diaSemana ?? 0);
+        setBackupActivo(d.backupAutomaticoActivo ?? true);
+        setMantenimientoActivo(d.mantenimientoActivo ?? true);
+        setSchedulerInfo({ proximoBackup: d.proximoBackup, proximoMantenimiento: d.proximoMantenimiento });
+      }
+    }).catch(() => {/* silencioso */});
+  }, []);
 
   const formatSize = (bytes: number) => {
     if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
@@ -346,14 +351,31 @@ export default function BackupsPage() {
               <h3 className="text-sm font-bold text-slate-800">Automatización</h3>
             </div>
             <form onSubmit={handleSaveConfig} className="p-5 space-y-3.5">
+              {/* Toggle backup activo */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600">Backup automático activo</span>
+                <button type="button" onClick={() => setBackupActivo(v => !v)} className="shrink-0">
+                  {backupActivo
+                    ? <ToggleRight className="w-8 h-8 text-emerald-600" />
+                    : <ToggleLeft className="w-8 h-8 text-slate-300" />}
+                </button>
+              </div>
+              {/* Toggle mantenimiento activo */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600">Mantenimiento automático activo</span>
+                <button type="button" onClick={() => setMantenimientoActivo(v => !v)} className="shrink-0">
+                  {mantenimientoActivo
+                    ? <ToggleRight className="w-8 h-8 text-emerald-600" />
+                    : <ToggleLeft className="w-8 h-8 text-slate-300" />}
+                </button>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1.5">Frecuencia</label>
                   <div className="relative">
                     <select value={frecuencia} onChange={(e) => setFrecuencia(e.target.value)} className={`${selectClass} focus:ring-emerald-400/60 focus:border-emerald-400`}>
-                      <option value="diario">Diario</option>
-                      <option value="semanal">Semanal</option>
-                      <option value="mensual">Mensual</option>
+                      <option value="DIARIO">Diario</option>
+                      <option value="SEMANAL">Semanal</option>
                     </select>
                     <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 rotate-90 pointer-events-none" />
                   </div>
@@ -368,6 +390,30 @@ export default function BackupsPage() {
                   />
                 </div>
               </div>
+              {/* Día de semana — solo para SEMANAL */}
+              {frecuencia === 'SEMANAL' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Día de la semana</label>
+                  <div className="relative">
+                    <select value={diaSemana} onChange={(e) => setDiaSemana(Number(e.target.value))} className={`${selectClass} focus:ring-emerald-400/60 focus:border-emerald-400`}>
+                      <option value={0}>Domingo</option>
+                      <option value={1}>Lunes</option>
+                      <option value={2}>Martes</option>
+                      <option value={3}>Miércoles</option>
+                      <option value={4}>Jueves</option>
+                      <option value={5}>Viernes</option>
+                      <option value={6}>Sábado</option>
+                    </select>
+                    <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 rotate-90 pointer-events-none" />
+                  </div>
+                </div>
+              )}
+              {schedulerInfo && (
+                <div className="grid grid-cols-1 gap-1.5 p-3 rounded-xl bg-slate-50 border border-slate-100 text-[10px] font-mono text-slate-500">
+                  <span><span className="font-bold text-slate-600">Próximo backup:</span> {schedulerInfo.proximoBackup}</span>
+                  <span><span className="font-bold text-slate-600">Próximo mant.:</span> {schedulerInfo.proximoMantenimiento}</span>
+                </div>
+              )}
               {resultConfig && (
                 <div className={`flex items-start gap-2 p-3 rounded-xl text-xs font-medium ${resultConfig.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
                   {resultConfig.ok ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" /> : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
@@ -385,65 +431,6 @@ export default function BackupsPage() {
             </form>
           </div>
 
-          {/* Respaldo Automático */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-white">
-              <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center">
-                <RotateCcw className="w-3.5 h-3.5 text-indigo-700" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-800">Respaldo Automático</h3>
-            </div>
-            <form onSubmit={handleSaveAutoConfig} className="p-5 space-y-4">
-              {/* Toggle habilitar */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold text-slate-700">Habilitar respaldo automático</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Se ejecutará según la frecuencia configurada</p>
-                </div>
-                <button type="button" onClick={() => setAutoEnabled(v => !v)} className="shrink-0">
-                  {autoEnabled
-                    ? <ToggleRight className="w-9 h-9 text-indigo-600" />
-                    : <ToggleLeft className="w-9 h-9 text-slate-300" />
-                  }
-                </button>
-              </div>
-              {/* Frecuencia */}
-              {autoEnabled && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Frecuencia</label>
-                  <div className="relative">
-                    <select
-                      value={autoFrecuencia}
-                      onChange={e => setAutoFrecuencia(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/60 focus:border-indigo-400 bg-white text-slate-800 appearance-none cursor-pointer"
-                    >
-                      <option value="CADA_HORA">Cada hora</option>
-                      <option value="CADA_6_HORAS">Cada 6 horas</option>
-                      <option value="CADA_DIA">Una vez al día</option>
-                    </select>
-                    <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 rotate-90 pointer-events-none" />
-                  </div>
-                </div>
-              )}
-              {resultAutoConfig && (
-                <div className={`flex flex-col gap-1 p-3 rounded-xl text-xs font-medium ${resultAutoConfig.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                  <div className="flex items-start gap-2">
-                    {resultAutoConfig.ok ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" /> : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
-                    {resultAutoConfig.msg}
-                  </div>
-                  {resultAutoConfig.nextRun && <p className="text-emerald-600 font-bold pl-5">{resultAutoConfig.nextRun}</p>}
-                </div>
-              )}
-              <button
-                type="submit"
-                disabled={loadingAutoConfig}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[.98] disabled:opacity-50 text-white text-sm font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm shadow-indigo-200"
-              >
-                {loadingAutoConfig ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                {loadingAutoConfig ? 'Guardando...' : 'Guardar configuración'}
-              </button>
-            </form>
-          </div>
         </div>
 
         {/* ── Right column: table ─── (3/5) */}

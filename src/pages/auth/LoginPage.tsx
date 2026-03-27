@@ -8,41 +8,51 @@ import {
   EyeOff,
   AlertCircle,
 } from "lucide-react";
-import usersData from '../../data/users.json';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
-    const user = (usersData as any[]).find(
-      (u) => u.email === correo && u.password === contrasena
-    );
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ correo, contrasena }),
+      });
 
-    if (!user) {
-      setError("Los datos ingresados no son válidos.");
-      return;
-    }
+      if (!res.ok) {
+        setError("Los datos ingresados no son válidos.");
+        return;
+      }
 
-    localStorage.setItem("accessToken", "local-token-" + user.id);
-    localStorage.setItem(
-      "usuario",
-      JSON.stringify({
-        ...user,
-        roles: user.role === "administrador" ? ["administrador"] : ["cliente"],
-      })
-    );
+      const json = await res.json();
+      const payload = json.data ?? json;
 
-    if (user.role === "administrador") {
-      navigate("/admin/dashboard");
-    } else {
-      navigate("/");
+      localStorage.setItem("accessToken", payload.accessToken ?? payload.token ?? "");
+      if (payload.refreshToken) localStorage.setItem("refreshToken", payload.refreshToken);
+      localStorage.setItem("usuario", JSON.stringify(payload.usuario ?? payload.user ?? payload));
+
+      const roles: string[] = (payload.usuario?.roles ?? payload.user?.roles ?? payload.roles ?? [])
+        .map((r: string) => r.toLowerCase());
+
+      if (roles.includes("administrador") || roles.includes("admin")) {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
+    } catch {
+      setError("Error de conexión. Intenta de nuevo.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -168,10 +178,13 @@ export default function LoginPage() {
             </div>
 
             <button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2"
               type="submit"
+              disabled={loading}
             >
-              Iniciar sesión
+              {loading ? (
+                <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              ) : "Iniciar sesión"}
             </button>
           </form>
 

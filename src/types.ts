@@ -232,3 +232,42 @@ export interface ImportProductsResponse {
   message: string;
   data: ImportProductsResult;
 }
+
+export interface AuditLog {
+  id: string;
+  usuarioId: string | null;
+  usuarioNombre: string | null;
+  usuarioCorreo: string | null;
+  accion: string;
+  entidad: string | null;
+  entidadId: string | null;
+  detalles: string | null;
+  fechaHora: string;
+}
+
+export interface SchedulerConfig {
+  backupAutomaticoActivo: boolean;
+  frecuencia: string;
+  diaSemana: number;
+  nombreDia: string;
+  hora: number;
+  horaFormato: string;
+  mantenimientoActivo: boolean;
+  proximoBackup: string;
+  proximoMantenimiento: string;
+}
+
+export interface SchedulerConfigResponse {
+  success: boolean;
+  message: string;
+  data: SchedulerConfig;
+}
+
+export interface UserBody {
+  nombre: string;
+  apellido: string;
+  correo: string;
+  telefono?: string;
+  password: string;
+  roles: string[];
+}

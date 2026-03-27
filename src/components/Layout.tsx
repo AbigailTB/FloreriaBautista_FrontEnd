@@ -43,9 +43,15 @@ export default function Layout() {
   }
 
   const hideNavAndFooter = ['/login', '/registro'].includes(location.pathname);
-  const isAdmin = user?.role === 'administrador' || user?.role === 'admin';
-  const isEmployee = user?.role === 'empleado' || user?.role === 'staff';
-  const isClient = user?.role === 'cliente' || user?.role === 'customer';
+  const userRoles: string[] = (user?.roles ?? (user?.role ? [user.role] : []))
+    .map((r: string) => r.toLowerCase());
+  const isAdmin = userRoles.some(r => ['administrador', 'admin'].includes(r));
+  const isEmployee = userRoles.some(r => ['empleado', 'staff'].includes(r));
+  const isClient = userRoles.some(r => ['cliente', 'customer'].includes(r));
+
+  if (isClient && location.pathname === '/' && !hideNavAndFooter) {
+    return <Navigate to="/inicio" replace />;
+  }
 
   if ((isAdmin || isEmployee) && !hideNavAndFooter) {
     if (isEmployee) {

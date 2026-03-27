@@ -98,7 +98,7 @@ export default function AdminUsersPage() {
 
   const stats = [
     { label: 'Total Usuarios', value: total, icon: <Users className="w-5 h-5" />, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Administradores', value: users.filter(u => u.roles.includes('ADMIN')).length, icon: <Shield className="w-5 h-5" />, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Administradores', value: users.filter(u => (u.roles ?? []).includes('ADMIN')).length, icon: <Shield className="w-5 h-5" />, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Activos', value: users.filter(u => u.estado === 'ACTIVO').length, icon: <CheckCircle2 className="w-5 h-5" />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Inactivos', value: users.filter(u => u.estado !== 'ACTIVO').length, icon: <XCircle className="w-5 h-5" />, color: 'text-slate-600', bg: 'bg-slate-50' },
   ];
@@ -176,7 +176,7 @@ export default function AdminUsersPage() {
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-black text-slate-900">Mi cuenta</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Tu perfil de usuario interno</p>
+                <p className="text-xs text-slate-400 mt-0.5"> </p>
               </div>
               <button
                 onClick={() => setShowDeactivateConfirm(true)}
@@ -188,13 +188,13 @@ export default function AdminUsersPage() {
             </div>
             <div className="p-6 flex items-center gap-6 flex-wrap">
               <div className="size-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-xl shadow-sm shrink-0">
-                {`${currentUser.nombre.charAt(0)}${currentUser.apellido.charAt(0)}`.toUpperCase()}
+                {`${(currentUser.nombre ?? '').charAt(0)}${(currentUser.apellido ?? '').charAt(0)}`.toUpperCase() || '?'}
               </div>
               <div className="flex-1 min-w-0 grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Nombre completo', value: `${currentUser.nombre} ${currentUser.apellido}` },
+                  { label: 'Nombre completo', value: `${currentUser.nombre ?? ''} ${currentUser.apellido ?? ''}`.trim() },
                   { label: 'Correo', value: currentUser.correo },
-                  { label: 'Roles', value: currentUser.roles.join(', ') },
+                  { label: 'Roles', value: (currentUser.roles ?? []).join(', ') },
                   { label: 'Estado', value: currentUser.estado },
                 ].map(item => (
                   <div key={item.label}>
@@ -269,7 +269,7 @@ export default function AdminUsersPage() {
                   <AnimatePresence mode="popLayout">
                     {users.map((user) => {
                       const isActive = user.estado === 'ACTIVO';
-                      const initials = `${user.nombre.charAt(0)}${user.apellido.charAt(0)}`.toUpperCase();
+                      const initials = `${(user.nombre ?? '').charAt(0)}${(user.apellido ?? '').charAt(0)}`.toUpperCase() || '?';
                       return (
                         <motion.tr
                           key={user.id}
@@ -312,7 +312,7 @@ export default function AdminUsersPage() {
                           </td>
                           <td className="p-5">
                             <div className="flex flex-wrap gap-1.5">
-                              {user.roles.map(rol => {
+                              {(user.roles ?? []).map(rol => {
                                 const badge = getRoleBadge([rol]);
                                 return (
                                   <span key={rol} className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${badge.color} shadow-sm`}>

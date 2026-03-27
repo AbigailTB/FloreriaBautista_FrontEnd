@@ -7,11 +7,19 @@
   --font-serif: "Playfair Display", serif;
   --font-display: "Public Sans", sans-serif;
   --radius-custom: 8px;
-  
+
   --color-primary: #1e3a8a;
   --color-secondary: #fbbf24;
   --color-background-light: #f8fafd;
   --color-background-dark: #0f172a;
+
+  --animate-shimmer: shimmer 2.5s ease-in-out infinite;
+
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%) skewX(-20deg); }
+    60%  { transform: translateX(200%)  skewX(-20deg); }
+    100% { transform: translateX(200%)  skewX(-20deg); }
+  }
 }
 
 body {

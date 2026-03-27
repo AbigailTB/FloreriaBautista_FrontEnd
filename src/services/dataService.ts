@@ -1,3 +1,10 @@
+import productsData from '../data/products.json';
+import ordersData from '../data/orders.json';
+import usersData from '../data/users.json';
+import settingsData from '../data/settings.json';
+import auditData from '../data/audit.json';
+import systemData from '../data/system.json';
+
 // Types
 export interface Product {
   id: string;
@@ -57,42 +64,19 @@ let _settings: any = {};
 let _audit: any[] = [];
 let _system: any = {};
 
-const fetchData = async (file: string) => {
-  try {
-    const res = await fetch(`/api/data/${file}`);
-    if (!res.ok) throw new Error(`Failed to fetch ${file}`);
-    return await res.json();
-  } catch (error) {
-    console.error(`Error fetching ${file}:`, error);
-    return [];
-  }
-};
-
-const saveData = async (file: string, data: any) => {
-  try {
-    const res = await fetch(`/api/data/${file}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error(`Failed to save ${file}`);
-    return true;
-  } catch (error) {
-    console.error(`Error saving ${file}:`, error);
-    return false;
-  }
-};
+// saveData is a no-op: JSON files are static assets, changes only persist in memory
+const saveData = async (_file: string, _data: any): Promise<boolean> => true;
 
 // Data Service
 export const DataService = {
   // Initialization
   init: async () => {
-    _products = await fetchData('products');
-    _orders = await fetchData('orders');
-    _users = await fetchData('users');
-    _settings = await fetchData('settings');
-    _audit = await fetchData('audit');
-    _system = await fetchData('system');
+    _products = productsData as unknown as Product[];
+    _orders = ordersData as unknown as Order[];
+    _users = usersData as unknown as User[];
+    _settings = settingsData;
+    _audit = auditData as unknown as any[];
+    _system = systemData;
     console.log('DataService initialized');
   },
 

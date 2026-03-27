@@ -98,7 +98,13 @@ export default function DashboardPage() {
   );
 
   // ── ADMIN DASHBOARD ──────────────────────────────────────────────────────────
-  if (user.role === 'admin' || user.role === 'administrador') {
+  const userRoles: string[] = (user?.roles ?? (user?.role ? [user.role] : []))
+    .map((r: string) => r.toLowerCase());
+  const isAdmin    = userRoles.some(r => ['admin', 'administrador'].includes(r));
+  const isCustomer = userRoles.some(r => ['customer', 'cliente'].includes(r));
+  const isEmployee = userRoles.some(r => ['staff', 'empleado'].includes(r));
+
+  if (isAdmin) {
     return (
       <div className={fullscreen ? "fixed inset-0 z-50 bg-white overflow-auto p-8 space-y-8" : "w-full space-y-8"}>
 
@@ -388,7 +394,7 @@ export default function DashboardPage() {
   }
 
   // ── CUSTOMER VIEW ────────────────────────────────────────────────────────────
-  if (user.role === 'customer' || user.role === 'cliente') {
+  if (isCustomer) {
     return (
       <div className="space-y-10 pb-16">
 
@@ -404,7 +410,7 @@ export default function DashboardPage() {
                 Bienvenido de vuelta
               </motion.span>
               <h1 className="text-5xl lg:text-6xl font-black mb-6 leading-[1.1] tracking-tight">
-                Tu próximo detalle, <span className="text-[#facc15]">{user.name.split(' ')[0]}</span>
+                Tu próximo detalle, <span className="text-[#facc15]">{(user?.nombre ?? user?.name ?? 'Admin').split(' ')[0]}</span>
               </h1>
               <p className="text-lg text-white/75 mb-8 leading-relaxed">
                 Flores frescas seleccionadas para transformar cualquier momento en un recuerdo.
@@ -508,14 +514,11 @@ export default function DashboardPage() {
   }
 
   // ── OTHER ROLES ──────────────────────────────────────────────────────────────
-  const roleConfig: Record<string, { title: string; desc: string; icon: React.ReactNode; color: string; border: string }> = {
-    staff:    { title: '¡Bienvenido Empleado!', desc: 'Gestiona los pedidos y el inventario del día.', icon: <Briefcase className="w-14 h-14 text-emerald-500" />, color: 'bg-emerald-50', border: 'border-emerald-200' },
-    empleado: { title: '¡Bienvenido Empleado!', desc: 'Gestiona los pedidos y el inventario del día.', icon: <Briefcase className="w-14 h-14 text-emerald-500" />, color: 'bg-emerald-50', border: 'border-emerald-200' },
-  };
+  const employeeCard = { title: '¡Bienvenido Empleado!', desc: 'Gestiona los pedidos y el inventario del día.', icon: <Briefcase className="w-14 h-14 text-emerald-500" />, color: 'bg-emerald-50', border: 'border-emerald-200' };
 
-  const cfg = roleConfig[user.role] ?? {
-    title: `¡Bienvenido ${user.name}!`, desc: 'Gracias por visitarnos.',
-    icon: <User className="w-14 h-14 text-slate-400" />, color: 'bg-slate-50', border: 'border-slate-200'
+  const cfg = isEmployee ? employeeCard : {
+    title: `¡Bienvenido ${user?.nombre ?? user?.name ?? 'Administrador'}!`, desc: 'Gracias por visitarnos.',
+    icon: <User className="w-14 h-14 text-slate-400" />, color: 'bg-slate-50', border: 'border-slate-200',
   };
 
   return (

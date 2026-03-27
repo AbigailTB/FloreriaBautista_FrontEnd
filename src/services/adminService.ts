@@ -14,6 +14,9 @@ import {
   Flower,
   FlowerBody,
   ImportProductsResponse,
+  UserBody,
+  AuditLog,
+  SchedulerConfigResponse,
 } from '../types';
 
 const API_BASE = '/api/admin';
@@ -24,8 +27,14 @@ let cachedToken: string | null = null;
 let tokenExpiry: number = 0;
 
 const getToken = async (): Promise<string> => {
+  // Usar el JWT real del usuario logueado si está disponible
+  const stored = localStorage.getItem('accessToken');
+  if (stored && !stored.startsWith('local-token-')) {
+    return stored;
+  }
+
   const now = Date.now();
-  // Reusar token si fue obtenido hace menos de 5 minutos
+  // Reusar token de dev si fue obtenido hace menos de 5 minutos
   if (cachedToken && now < tokenExpiry) {
     return cachedToken;
   }
@@ -120,6 +129,30 @@ export const AdminService = {
       body: JSON.stringify({ frecuencia, hora }),
     });
     if (!res.ok) throw new Error('Error al guardar configuración de respaldos');
+    return res.json();
+  },
+
+  getScheduler: async (): Promise<SchedulerConfigResponse> => {
+    const res = await fetch(`${API_BASE}/scheduler`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error('Error al obtener configuración del scheduler');
+    return res.json();
+  },
+
+  saveSchedulerConfig: async (body: {
+    backupAutomaticoActivo: boolean;
+    frecuencia: string;
+    diaSemana: number;
+    hora: number;
+    mantenimientoActivo: boolean;
+  }): Promise<SchedulerConfigResponse> => {
+    const res = await fetch(`${API_BASE}/scheduler`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Error al guardar configuración de automatización');
     return res.json();
   },
 
@@ -243,9 +276,66 @@ export const AdminService = {
     if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
   },
 
+  importFlowers: async (file: File): Promise<ImportProductsResponse> => {
+    const form = new FormData();
+    form.append('archivo', file);
+    const res = await fetch(`${API_BASE}/import/flowers`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${await getToken()}` },
+      body: form,
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  exportFlowers: async (): Promise<{ blob: Blob; filename: string }> => {
+    const res = await fetch(`${API_BASE}/export/flowers`, {
+      headers: { Authorization: `Bearer ${await getToken()}` },
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    const disposition = res.headers.get('content-disposition') ?? '';
+    const match = disposition.match(/filename=([^;]+)/);
+    const filename = match ? match[1].trim() : 'flores_export.csv';
+    return { blob: await res.blob(), filename };
+  },
+
   // ─── Usuario actual ───────────────────────────────────────────
   getCurrentUser: async (): Promise<MeResponse> => {
     const res = await fetch('/api/users/me', {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  updateCurrentUser: async (body: {
+    nombre?: string;
+    apellido?: string;
+    telefono?: string;
+    sexo?: string;
+    fechaNacimiento?: string;
+  }): Promise<MeResponse> => {
+    const res = await fetch('/api/users/me', {
+      method: 'PUT',
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  // ─── Producto público por ID ──────────────────────────────────
+  getPublicProductById: async (productId: string): Promise<SingleResponse<ProductDetail>> => {
+    const res = await fetch(`/api/products/${productId}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  // ─── Pedidos del cliente autenticado ─────────────────────────
+  getMyOrders: async (): Promise<ApiResponse<Order>> => {
+    const res = await fetch('/api/orders/mis-pedidos', {
       headers: await authHeaders(),
     });
     if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
@@ -295,6 +385,16 @@ export const AdminService = {
       headers: await authHeaders(),
     });
     if (!res.ok) throw new Error('Error al obtener flores/insumos');
+    return res.json();
+  },
+
+  updateFlower: async (id: string, body: FlowerBody): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch(`${API_BASE}/flowers/${id}`, {
+      method: 'PUT',
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
     return res.json();
   },
 
@@ -358,5 +458,43 @@ export const AdminService = {
       body: JSON.stringify({ roles }),
     });
     if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+  },
+
+  getAuditLogs: async (params: {
+    entidad?: string;
+    accion?: string;
+    usuarioId?: string;
+    desde?: string;
+    hasta?: string;
+    page?: number;
+    size?: number;
+  } = {}): Promise<ApiResponse<AuditLog>> => {
+    const query = new URLSearchParams();
+    if (params.entidad)   query.set('entidad',    params.entidad);
+    if (params.accion)    query.set('accion',     params.accion);
+    if (params.usuarioId) query.set('usuarioId',  params.usuarioId);
+    if (params.desde)     query.set('desde',      params.desde);
+    if (params.hasta)     query.set('hasta',      params.hasta);
+    if (params.page !== undefined) query.set('page', String(params.page));
+    if (params.size !== undefined) query.set('size', String(params.size));
+    const qs = query.toString();
+    const res = await fetch(`${API_BASE}/audit${qs ? `?${qs}` : ''}`, {
+      headers: await authHeaders(),
+    });
+    if (!res.ok) throw new Error(`Error ${res.status}: ${await res.text()}`);
+    return res.json();
+  },
+
+  createAdminUser: async (body: UserBody): Promise<SingleResponse<User>> => {
+    const res = await fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Error ${res.status}: ${errorText}`);
+    }
+    return res.json();
   },
 };
